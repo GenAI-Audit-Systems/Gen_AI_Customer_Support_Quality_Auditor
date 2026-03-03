@@ -1,85 +1,77 @@
 # 🚀 GenAI-Powered Customer Support Quality Auditor
+## 📍 Milestone 2: Advanced Scoring Engine & Premium UI
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
-![React](https://img.shields.io/badge/React-18.x-61DAFB.svg?logo=react&logoColor=black)
-![LangChain](https://img.shields.io/badge/LangChain-Enabled-green.svg)
-![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-black.svg)
-![Status](https://img.shields.io/badge/Status-Milestone_2_Completed-success.svg)
+![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Vite](https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)
+![Deepgram](https://img.shields.io/badge/Deepgram-STT-101C26?style=for-the-badge)
+![OpenRouter](https://img.shields.io/badge/OpenRouter-LLM-blue?style=for-the-badge)
+![Framer Motion](https://img.shields.io/badge/Framer_Motion-black?style=for-the-badge&logo=framer)
 
-## 📖 Project Statement
-This project aims to build a **GenAI-powered quality auditing platform** that reviews customer support chats and calls, assigns quality scores, detects compliance violations, and suggests improvements in real time. 
+## 📖 Milestone 2 Overview
+Welcome to **Milestone 2** of the GenAI-Powered Customer Support Quality Auditor. 
 
-By combining NLP, RAG pipelines, and speech-to-text transcription, the platform leverages LLMs to evaluate tone, empathy, compliance with scripts, and resolution effectiveness. Designed for enterprises, BPOs, and SaaS companies, the solution enhances customer experience, ensures compliance, and reduces manual QA workload.
+While Milestone 1 laid the groundwork for basic transcription, Milestone 2 transforms the project into a highly interactive, full-stack application. We have implemented a powerful **Django API backend** integrated with **Deepgram** for high-speed, multi-language transcription and **OpenRouter** (GPT-4o / Claude 3.5 Sonnet) for deep contextual scoring. 
 
----
-
-## 🎯 Key Outcomes
-- **Automated analysis** of chat and call transcripts.
-- **LLM-based scoring** of quality metrics (empathy, resolution, compliance).
-- **Real-time detection** of compliance breaches.
-- **RAG-powered contextual feedback** and improvement suggestions.
-- **Dashboards for supervisors** with agent-wise analytics.
+On the frontend, we have adopted a lightning-fast **Vite + React architecture**, styled with a premium **Cyberpunk/Minimalist** design system featuring glassmorphism, dark mode, and smooth Framer Motion animations.
 
 ---
 
-## 🧩 Modules & Technology Rationale (Why we use what we use)
+## ✨ Key Features Implemented in Milestone 2
 
-To achieve a fully automated QA system, the architecture is broken down into five core modules. Here is an explanation of what they do and **why** specific technologies were chosen:
+### 🎨 Premium Frontend (Vite + React)
+- **Modern UI/UX:** A sleek "Cyberpunk/Minimalist" aesthetic utilizing CSS variables, smooth gradients, dark mode, and glassmorphism.
+- **Drag-and-Drop Upload:** Intuitive audio file upload zone supporting `.m4a`, `.mp3`, and `.wav` formats.
+- **Real-Time Display:** Live transcript rendering paired with interactive charts visualizing sentiment and quality scores.
+- **Fluid Animations:** Powered by **Framer Motion** for elegant entrance/exit animations of results cards and dashboard elements.
 
-### 1. Data Ingestion & Transcription Layer
-*   **What it does:** Processes raw chat logs and transcribes audio calls into structured text.
-*   **Tech Used:** **OpenAI Whisper STT**.
-*   **Why it's used:** Traditional transcription tools struggle with accents, background noise, and industry jargon. Whisper is a state-of-the-art neural net that provides highly accurate speech-to-text transcription, ensuring the LLM gets clean data to analyze.
-
-### 2. Quality Scoring & Compliance Engine
-*   **What it does:** Scores empathy, professionalism, and flags violations.
-*   **Tech Used:** **LLMs (GPT-4 / Llama)**.
-*   **Why it's used:** Rule-based NLP (like searching for specific keywords) cannot understand human emotion, tone, or sarcasm. LLMs can dynamically "understand" the context of a conversation to accurately judge if an agent was truly empathetic or successfully resolved an issue.
-
-### 3. RAG Pipeline for Contextual Audits
-*   **What it does:** Checks agent responses against internal company policy documents.
-*   **Tech Used:** **LangChain + Pinecone/FAISS**.
-*   **Why it's used:** LLMs are prone to "hallucinations" (making things up). By using Retrieval-Augmented Generation (RAG) and Vector Databases (Pinecone/FAISS), we force the LLM to read the *actual company rulebook* before judging the agent's compliance, ensuring 100% accurate auditing.
-
-### 4. Dashboard & Visualization Hub
-*   **What it does:** Displays real-time analytics and agent-wise performance.
-*   **Tech Used:** **React (Frontend) / FastAPI (Backend)**.
-*   **Why it's used:** React provides a highly responsive, component-based UI perfect for building live data dashboards (using charts and tables). It allows supervisors to instantly see trends without refreshing the page.
-
-### 5. Alerting & Reporting Module
-*   **What it does:** Sends alerts for critical compliance issues and exports reports.
-*   **Tech Used:** PDF/Excel generation libraries + automated email triggers.
-*   **Why it's used:** Supervisors don't have time to stare at a dashboard all day. Automated alerts push critical issues (e.g., an agent swearing or breaking legal compliance) to management instantly.
+### 🧠 Advanced Backend (Django REST API)
+- **Deepgram Diarization:** Enhanced Speech-to-Text (STT) that automatically separates speakers (e.g., distinguishing the Agent from the Customer).
+- **Multi-Language Support:** The transcription layer now supports multiple languages natively via Deepgram.
+- **OpenRouter LLM Integration:** Routes transcripts through top-tier models (GPT-4o or Claude 3.5 Sonnet) to generate strict JSON evaluations.
+- **Audit Scoring:** AI accurately scores metrics including **Empathy, Resolution, Professionalism, and Compliance**.
+- **History Management API:** Endpoints to store and fetch previous audit results.
+- **Export Capabilities:** Instantly export generated audit reports into **PDF format** for supervisors.
 
 ---
 
-## 📍 Current Focus: Milestone 2 & React Frontend
+## ⚙️ Architecture & Data Flow
 
-We are currently at the end of **Week 4**, having successfully completed Data Ingestion (Milestone 1) and the LLM Scoring Engine (Milestone 2). The current repository focus is connecting this backend logic to our React Supervisor Dashboard using a rapid "Vibe Coding" approach (leveraging AI coding assistants).
+1. **Upload:** User drops an audio file into the React (Vite) frontend.
+2. **Transcription:** The file is sent to the Django backend, which proxies it to the **Deepgram API**. Deepgram returns a highly accurate, multi-language transcript with speaker diarization.
+3. **Analysis:** Django sends the diarized transcript to **OpenRouter** with a strict system prompt. The LLM (Claude 3.5 / GPT-4o) acts as the QA Auditor and returns a structured JSON evaluation.
+4. **Visualization:** The React frontend receives the JSON, triggering Framer Motion animations to reveal Score Cards, Sentiment Charts, and the flagged transcript.
 
-### 📂 Project Structure
+---
+
+## 📂 Project Structure
 
 ```text
-Gen_AI_Customer_Support_Quality_Auditor/
+Milestone_2/
 │
-├── backend/                       # Python / FastAPI Backend
-│   ├── sample_data/               # Chat and Call transcripts
-│   ├── prompts/                   # System prompts for scoring
-│   ├── scoring_engine.py          # LLM pipeline (GPT/Llama integration)
-│   ├── app.py                     # API endpoints to serve data to React
-│   └── requirements.txt           
+├── backend/                       # Django REST API
+│   ├── manage.py
+│   ├── core/                      # Main Django project settings
+│   ├── auditor/                   # App handling transcription & LLM logic
+│   │   ├── views.py               # API endpoints (Upload, History, Export)
+│   │   ├── services/
+│   │   │   ├── deepgram_service.py # Diarization & STT logic
+│   │   │   └── openrouter_service.py# LLM scoring prompts & routing
+│   │   └── models.py              # Database models for Audit History
+│   └── requirements.txt
 │
-├── frontend/                      # React Supervisor Dashboard
-│   ├── public/
-│   ├── src/
-│   │   ├── components/            # UI Components (Charts, Cards, Tables)
-│   │   │   ├── ScoreCard.jsx      # Displays Empathy, Compliance scores
-│   │   │   ├── TranscriptView.jsx # Highlights compliance breaches in text
-│   │   │   └── AgentTable.jsx     # Lists agents and their average scores
-│   │   ├── pages/                 # Main Dashboard View
-│   │   ├── services/              # API calls to Python backend
-│   │   └── App.jsx
+├── frontend/                      # React + Vite Application
 │   ├── package.json
-│   └── tailwind.config.js
+│   ├── vite.config.js
+│   ├── src/
+│   │   ├── components/            
+│   │   │   ├── DragDropZone.jsx   # Audio upload component
+│   │   │   ├── AnimatedScoreCard.jsx # Framer Motion score UI
+│   │   │   └── InteractiveChart.jsx  # Recharts sentiment visualization
+│   │   ├── styles/
+│   │   │   └── theme.css          # Cyberpunk/Glassmorphism CSS variables
+│   │   ├── services/              # Axios API calls to Django
+│   │   └── App.jsx
+│   └── index.html
 │
 └── README.md
