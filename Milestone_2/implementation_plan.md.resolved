@@ -1,0 +1,29 @@
+# Implementation Plan - Milestone 2: Customer Support Quality Auditor
+
+The goal is to build a modern, real-time customer support quality auditor using GenAI. Milestone 2 will focus on detailed scoring, sentiment analysis, and a premium UI.
+
+## User Review Required
+> [!IMPORTANT]
+> - Are there specific "Extra Features" you want for Milestone 2? I'll add multi-language support (Deepgram) and report exports (PDF).
+> - For real-time processing, do you want full WebSocket streaming or is "immediate post-recording analysis" sufficient?
+
+## Proposed Changes
+
+### [Backend] Django API (Milestone_2/backend)
+- **Transcription**: Enhance Deepgram integration for diarization (Speaker separation) and multi-language support.
+- **Analysis**: Use OpenRouter (GPT-4o or Claude 3.5 Sonnet) for detailed quality audit scoring (Empathy, Resolution, Professionalism, Compliance).
+- **History Management**: Simple API to fetch previous audit results.
+
+### [Frontend] React App (Milestone_2/frontend)
+- **Vite Setup**: Fast, modern frontend architecture.
+- **Design System**: Use CSS variables for a premium "Cyberpunk/Minimalist" look (Dark mode, glassmorphism, smooth gradients).
+- **Animations**: Framer Motion for entrance/exit animations of results cards.
+- **Features**: Drag-and-drop audio upload, real-time transcription display, and interactive charts for sentiment/scoring.
+
+## Verification Plan
+### Automated Tests
+- Test Deepgram transcription with sample .m4a/.mp3 files.
+- Verify OpenRouter returns valid JSON with scoring for various support scenarios.
+### Manual Verification
+- Upload test audio files and verify the transcription and scoring accuracy in the UI.
+- Test responsive layout on different screen sizes.
