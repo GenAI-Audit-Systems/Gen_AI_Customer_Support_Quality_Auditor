@@ -8,7 +8,7 @@ from django.core.management import call_command
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_backend.settings')
 
-# Run migrations automatically (important for serverless deployment)
+# Run migrations automatically on startup (important for serverless)
 try:
     call_command("migrate", interactive=False)
 except Exception as e:
@@ -16,5 +16,5 @@ except Exception as e:
 
 application = get_wsgi_application()
 
-# Vercel entrypoint
+# Vercel entry point
 app = application
