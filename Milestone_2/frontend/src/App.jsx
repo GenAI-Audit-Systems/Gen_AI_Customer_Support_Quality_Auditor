@@ -103,6 +103,11 @@ export default function App() {
 
   const exportResult = (fmt = 'txt') => {
     if (!result) return;
+    if (fmt === 'xls') {
+      window.open(`${API_BASE}export-excel/${result.id}/`, '_blank');
+      return;
+    }
+
     const a_d = result.audit || {};
     const dlg = result.transcript?.dialogue || [];
 
@@ -266,6 +271,19 @@ export default function App() {
           </div>
         </div>
 
+        {/* DB Health */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(255,255,255,.02)', padding: '4px 12px', borderRadius: 20, border: '1px solid rgba(255,255,255,.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: diag?.neon?.includes('Connected') ? '#34d399' : '#f87171', boxShadow: diag?.neon?.includes('Connected') ? '0 0 8px #34d39988' : 'none' }} />
+            <span style={{ fontSize: 9, fontWeight: 900, color: '#475569', textTransform: 'uppercase' }}>Neon</span>
+          </div>
+          <div style={{ width: 1, height: 10, background: 'rgba(255,255,255,.1)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: diag?.milvus?.includes('Connected') ? '#34d399' : '#fbbf24', boxShadow: diag?.milvus?.includes('Connected') ? '0 0 8px #34d39988' : 'none' }} />
+            <span style={{ fontSize: 9, fontWeight: 900, color: '#475569', textTransform: 'uppercase' }}>Milvus</span>
+          </div>
+        </div>
+
         {/* Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {diag && (
@@ -280,6 +298,9 @@ export default function App() {
               <button onClick={() => setDiag(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#334155' }}><X size={11} /></button>
             </motion.div>
           )}
+          <a href="/m3" className="btn" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', border: 'none', textDecoration: 'none' }}>
+            <Sparkles size={13} /> M3 Dashboard
+          </a>
           <button className="btn" onClick={testConn}>
             {diagLoading ? <span className="spin" style={{ width: 12, height: 12, border: '2px solid #6366f1', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block' }} /> : <Shield size={13} />}
             Test API
@@ -293,9 +314,13 @@ export default function App() {
                 onClick={() => exportResult('txt')}>
                 <Download size={13} /> TXT Report
               </button>
-              <button className="btn" style={{ borderLeft: 'none', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, paddingLeft: 8 }}
+              <button className="btn" style={{ borderLeft: 'none', borderRight: '1px solid rgba(99,102,241,.2)', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, paddingLeft: 8 }}
                 onClick={() => exportResult('doc')} title="Download as Word">
                 .doc
+              </button>
+              <button className="btn" style={{ borderLeft: 'none', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, paddingLeft: 10, background: 'rgba(52,211,153,.15)', color: '#34d399' }}
+                onClick={() => exportResult('xls')} title="Download as Excel">
+                <Download size={13} style={{ marginRight: 4 }} /> .xlsx
               </button>
             </div>
           )}
@@ -308,10 +333,7 @@ export default function App() {
         {/* HERO */}
         <motion.div initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .5 }}
           style={{ textAlign: 'center', marginBottom: '2.5rem', paddingTop: '1rem' }}>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.2em', color: '#6366f1', textTransform: 'uppercase', marginBottom: 10 }}>
-            Milestone 2 &bull; GenAI Powered
-          </div>
-          <h1 style={{ fontSize: 'clamp(2rem,4vw,3rem)', fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 10 }}>
+          <h1 style={{ fontSize: 'clamp(2rem,4vw,3.5rem)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 10 }}>
             Customer Support <span className="gt">Quality Auditor</span>
           </h1>
           <p style={{ color: '#475569', fontWeight: 500, fontSize: 14, maxWidth: 460, margin: '0 auto' }}>

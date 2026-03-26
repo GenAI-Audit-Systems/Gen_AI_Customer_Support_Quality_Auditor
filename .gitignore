@@ -9,6 +9,9 @@ __pycache__/
 *.pyo
 *.pyd
 *.pyc
+.venv/
+env/
+Milestone_2/backend/.venv/
 
 # Django
 db.sqlite3

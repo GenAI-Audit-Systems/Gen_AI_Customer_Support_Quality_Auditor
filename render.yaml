@@ -1,0 +1,45 @@
+databases:
+  - name: auditor-postgres
+    databaseName: auditor_db
+    user: auditor_admin
+    plan: free
+
+services:
+  - type: web
+    name: auditor-backend
+    env: python
+    region: ohio
+    plan: free
+    buildCommand: "cd Milestone_2/backend && chmod +x build_files.sh && ./build_files.sh"
+    startCommand: "cd Milestone_2/backend && daphne -b 0.0.0.0 -p $PORT django_backend.asgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: auditor-postgres
+          property: connectionString
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: ACTIVE_LLM_PROVIDER
+        value: openrouter
+      - key: OPENROUTER_API_KEY
+        sync: false # You will enter this in the Render Dashboard after deployment
+      - key: GROQ_API_KEY
+        sync: false
+        
+  - type: web
+    name: auditor-frontend
+    env: static
+    region: ohio
+    plan: free
+    buildCommand: "cd Milestone_2/frontend && npm install && npm run build"
+    staticPublishPath: "./Milestone_2/frontend/dist"
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: auditor-backend
+          envVarKey: RENDER_EXTERNAL_URL

@@ -10,8 +10,8 @@
 
 :root {
   --bg: #05070f;
-  --bg-card: rgba(10, 14, 28, 0.8);
-  --border: rgba(99, 102, 241, 0.14);
+  --bg-card: rgba(10, 14, 28, 0.7);
+  --border: rgba(99, 102, 241, 0.18);
   --primary: #6366f1;
   --violet: #8b5cf6;
   --pink: #ec4899;
@@ -21,6 +21,7 @@
   --text: #f1f5f9;
   --muted: #64748b;
   --dim: #1e293b;
+  --glass-glow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
 }
 
 html,

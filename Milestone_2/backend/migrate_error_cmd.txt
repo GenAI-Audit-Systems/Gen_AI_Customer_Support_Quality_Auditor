@@ -1,0 +1,95 @@
+[RAG] Policy auto-load skipped: <ConnectionConfigException: (code=1, message=Illegal uri: [localhost:19530], expected form 'http[s]://[user:password@]example.com[:12345]')>
+Traceback (most recent call last):
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\manage.py", line 26, in <module>
+    main()
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\manage.py", line 22, in main
+    execute_from_command_line(sys.argv)
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\core\management\__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\core\management\__init__.py", line 436, in execute
+    self.fetch_command(subcommand).run_from_argv(self.argv)
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\core\management\base.py", line 412, in run_from_argv
+    self.execute(*args, **cmd_options)
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\core\management\base.py", line 458, in execute
+    output = self.handle(*args, **options)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\core\management\base.py", line 106, in wrapper
+    res = handle_func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\core\management\commands\migrate.py", line 100, in handle
+    self.check(databases=[database])
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\core\management\base.py", line 485, in check
+    all_issues = checks.run_checks(
+                 ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\core\checks\registry.py", line 88, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\core\checks\urls.py", line 42, in check_url_namespaces_unique
+    all_namespaces = _load_all_namespaces(resolver)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\core\checks\urls.py", line 61, in _load_all_namespaces
+    url_patterns = getattr(resolver, "url_patterns", [])
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\utils\functional.py", line 57, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\urls\resolvers.py", line 715, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+                       ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\utils\functional.py", line 57, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\urls\resolvers.py", line 708, in urlconf_module
+    return import_module(self.urlconf_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kpriy\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\django_backend\urls.py", line 12, in <module>
+    path('api/rag/',    include('rag.urls')),           # Milestone 3 — RAG engine
+                        ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\django\urls\conf.py", line 38, in include
+    urlconf_module = import_module(urlconf_module)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kpriy\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\rag\urls.py", line 2, in <module>
+    from .views import (
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\rag\views.py", line 12, in <module>
+    from .rag_engine import get_engine
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\rag\rag_engine.py", line 22, in <module>
+    from .milvus_client import get_collection, MILVUS_AVAILABLE, submit_async
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\rag\milvus_client.py", line 14, in <module>
+    from pymilvus import (
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\pymilvus\__init__.py", line 40, in <module>
+    from .milvus_client import AsyncMilvusClient, MilvusClient
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\pymilvus\milvus_client\__init__.py", line 1, in <module>
+    from .async_milvus_client import AsyncMilvusClient
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\pymilvus\milvus_client\async_milvus_client.py", line 28, in <module>
+    from pymilvus.orm.collection import CollectionSchema, Function, FunctionScore
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\pymilvus\orm\collection.py", line 42, in <module>
+    from .connections import connections
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\pymilvus\orm\connections.py", line 593, in <module>
+    connections = Connections()
+                  ^^^^^^^^^^^^^
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\pymilvus\orm\connections.py", line 59, in __call__
+    cls.instance.__init__(*args, **kwargs)
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\pymilvus\orm\connections.py", line 95, in __init__
+    address, parsed_uri = self.__parse_address_from_uri(Config.MILVUS_URI)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend\.venv\Lib\site-packages\pymilvus\orm\connections.py", line 131, in __parse_address_from_uri
+    raise ConnectionConfigException(message=f"{illegal_uri_msg.format(uri)}") from None
+pymilvus.exceptions.ConnectionConfigException: <ConnectionConfigException: (code=1, message=Illegal uri: [localhost:19530], expected form 'http[s]://[user:password@]example.com[:12345]')>

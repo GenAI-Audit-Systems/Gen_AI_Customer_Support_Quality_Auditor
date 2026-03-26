@@ -1,0 +1,83 @@
+COMPLIANCE POLICY MANUAL — AI AUDITOR PLATFORM
+Version 2.0 | Effective March 2026
+================================================
+
+SECTION 1: AGENT IDENTITY VERIFICATION (MANDATORY)
+---------------------------------------------------
+1.1 Agents MUST verify customer identity before accessing any account information.
+    Required verification fields:
+    - Full name (first + last)
+    - Date of birth OR account PIN
+    - Last 4 digits of registered phone number or email address
+
+1.2 Failure to verify identity before sharing account information constitutes a
+    CRITICAL compliance violation and must be flagged immediately.
+
+1.3 Agents may NOT proceed with any account modification without completing
+    the two-factor verification protocol described in SOP-4.2.
+
+SECTION 2: DATA PRIVACY & GDPR COMPLIANCE
+------------------------------------------
+2.1 Agents must NEVER read back full credit card numbers, Social Security numbers,
+    or national ID numbers over the phone or chat.
+
+2.2 Customers have the right to request data deletion. Agents must:
+    - Acknowledge the request within the same interaction
+    - Escalate to the Data Privacy team within 24 hours
+    - Provide a reference ticket number
+
+2.3 Recording consent must be confirmed verbally at the start of every call:
+    "This call may be recorded for quality and training purposes. Do you consent?"
+
+2.4 Personal data shared by the customer must NOT be retained in chat logs 
+    beyond what is operationally necessary. Agents must follow data minimization.
+
+SECTION 3: PROHIBITED LANGUAGE & CONDUCT
+-----------------------------------------
+3.1 Agents must NEVER:
+    - Use profanity or aggressive language
+    - Interrupt a customer more than once
+    - Make promises that cannot be fulfilled (e.g., guaranteeing refunds not approved)
+    - Discuss competitor pricing or capabilities
+    - Disclose internal system issues or outage details beyond what is approved
+
+3.2 Agents must maintain a calm, professional tone regardless of customer behavior.
+
+3.3 If a customer becomes verbally abusive, agents should issue one warning and
+    then politely end the interaction. This is NOT a compliance violation.
+
+SECTION 4: ESCALATION PROTOCOL
+--------------------------------
+4.1 The following situations REQUIRE immediate escalation:
+    - Customer threatens legal action
+    - Customer reports fraudulent account activity
+    - Customer is experiencing a service outage affecting business operations
+    - Customer is in emotional distress (e.g., bereavement, medical emergency context)
+
+4.2 Escalation means transferring to a Tier-2 specialist or supervisor within 60 seconds.
+    Agents must NOT place the customer on hold for more than 2 minutes before escalating.
+
+4.3 Agents must document the escalation reason in the case notes before transferring.
+
+SECTION 5: REFUND & COMPENSATION POLICY
+-----------------------------------------
+5.1 Agents are authorized to offer:
+    - Goodwill credit up to $25 without manager approval
+    - Refund for billing errors upon verification
+    - Service credit for outage-related issues (max 30 days)
+
+5.2 Any compensation exceeding authorized limits requires supervisor override code.
+
+5.3 Agents must NEVER offer cash refunds via chat. All cash refund processing 
+    goes through the finance portal with 5-7 business day processing time.
+
+SECTION 6: CALL CLOSURE REQUIREMENTS
+--------------------------------------
+6.1 Every interaction MUST close with:
+    - Confirmation that the issue is resolved (or escalated with ticket number)
+    - Offer of further assistance ("Is there anything else I can help you with?")
+    - Courtesy close ("Thank you for contacting us. Have a great day!")
+
+6.2 Abrupt disconnection without a proper closure is a compliance violation.
+
+6.3 NPS survey invitation must be offered at the end of every resolved interaction.

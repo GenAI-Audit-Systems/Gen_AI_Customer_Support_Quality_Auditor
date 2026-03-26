@@ -5,8 +5,13 @@ import re
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from django.http import HttpResponse
 from .models import AuditResult
+from .utils import split_transcript_by_speaker
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill
 from dotenv import load_dotenv
+import io
 
 # Load .env file
 load_dotenv()
@@ -191,11 +196,14 @@ class TextProcessView(APIView):
             # Audit
             audit_results = perform_quality_audit(content)
             
+            # Speaker Splitting (if applicable)
+            transcript_data = split_transcript_by_speaker(content)
+            
             # Persistence
             audit_record = AuditResult.objects.create(
                 source_type='text',
                 filename=file_obj.name if file_obj else "Direct Input",
-                transcript_json={"full_text": content, "dialogue": []},
+                transcript_json=transcript_data,
                 audit_json=audit_results,
                 overall_score=audit_results.get("overall_score", 0),
                 sentiment=audit_results.get("sentiment", "Neutral")
@@ -204,7 +212,7 @@ class TextProcessView(APIView):
             return Response({
                 "id": audit_record.id,
                 "source": "text",
-                "content": content,
+                "transcript": transcript_data,
                 "audit": audit_results
             })
         except Exception as e:
@@ -244,4 +252,100 @@ class DiagnosticView(APIView):
         except Exception as e:
             results["openrouter"] = f"Timeout/Error: {str(e)}"
             
+        # Test Neon
+        db_url = os.getenv("DATABASE_URL")
+        results["neon"] = "Connected" if db_url and "neon.tech" in db_url else "Disconnected (Fallback to SQLite)"
+
+        # Test Milvus
+        from rag.milvus_client import MILVUS_AVAILABLE
+        results["milvus"] = "Connected" if MILVUS_AVAILABLE else "Disconnected (Mock Mode)"
+
         return Response(results)
+
+class ExcelExportView(APIView):
+    """
+    GET /api/export-excel/<int:audit_id>/ - Generates a professional Excel audit report.
+    """
+    def get(self, request, audit_id):
+        try:
+            record = AuditResult.objects.get(id=audit_id)
+            audit = record.audit_json
+            transcript = record.transcript_json
+            
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Audit Report"
+            
+            # Header Styling
+            header_font = Font(bold=True, color="FFFFFF", size=12)
+            header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
+            align_center = Alignment(horizontal="center", vertical="center")
+            
+            # 1. Summary Section
+            ws.merge_cells("A1:C1")
+            ws["A1"] = "AI QUALITY AUDIT REPORT"
+            ws["A1"].font = Font(bold=True, size=14, color="4F46E5")
+            ws["A1"].alignment = align_center
+            
+            ws["A3"] = "File Name:"
+            ws["B3"] = record.filename
+            ws["A4"] = "Date:"
+            ws["B4"] = record.created_at.strftime("%Y-%m-%d %H:%M")
+            ws["A5"] = "Overall Score:"
+            ws["B5"] = f"{record.overall_score}/100"
+            
+            # 2. Scores Table
+            ws["A7"] = "Metric"
+            ws["B7"] = "Score (/10)"
+            ws["C7"] = "Rationale"
+            for cell in ["A7", "B7", "C7"]:
+                ws[cell].font = header_font
+                ws[cell].fill = header_fill
+                ws[cell].alignment = align_center
+
+            row = 8
+            for metric, score in audit.get("scores", {}).items():
+                ws.cell(row=row, column=1, value=metric.capitalize())
+                ws.cell(row=row, column=2, value=score)
+                ws.cell(row=row, column=3, value=audit.get("metric_justifications", {}).get(metric, ""))
+                row += 1
+                
+            # 3. Key Findings
+            row += 2
+            ws.cell(row=row, column=1, value="Key Findings").font = header_font
+            ws.cell(row=row, column=1).fill = header_fill
+            row += 1
+            for finding in audit.get("key_findings", []):
+                ws.cell(row=row, column=1, value=finding)
+                row += 1
+                
+            # 4. Transcript
+            row += 2
+            ws.cell(row=row, column=1, value="Transcript").font = header_font
+            ws.cell(row=row, column=1).fill = header_fill
+            row += 1
+            for turn in transcript.get("dialogue", []):
+                ws.cell(row=row, column=1, value=f"[{turn['speaker']}]: {turn['text']}")
+                row += 1
+
+            # Adjust column width
+            ws.column_dimensions['A'].width = 25
+            ws.column_dimensions['B'].width = 15
+            ws.column_dimensions['C'].width = 60
+
+            # Stream buffer for response
+            output = io.BytesIO()
+            wb.save(output)
+            output.seek(0)
+            
+            response = HttpResponse(
+                output.read(),
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            response['Content-Disposition'] = f'attachment; filename=audit_{audit_id}.xlsx'
+            return response
+            
+        except AuditResult.DoesNotExist:
+            return Response({"error": "Audit not found"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)

@@ -1,0 +1,81 @@
+STANDARD OPERATING PROCEDURE (SOP) MANUAL — CUSTOMER SUPPORT
+AI Auditor Platform | Version 3.1 | March 2026
+===============================================================
+
+SOP-1: GREETING & OPENING
+---------------------------
+1.1 Phone calls:
+    "Thank you for calling [Company Name] support. My name is [Agent Name].
+     How can I assist you today?"
+
+1.2 Chat:
+    "Hello! Welcome to [Company Name] support. I'm [Agent Name] and I'm here to help.
+     How can I assist you today?"
+
+1.3 Agents must greet within 3 seconds of connection. Delayed greeting is flagged.
+
+1.4 Agents must introduce themselves by first name in every interaction.
+
+SOP-2: ACTIVE LISTENING & PROBING
+-----------------------------------
+2.1 After the customer explains their issue, the agent must:
+    - Paraphrase the issue to confirm understanding
+    - Ask at least ONE clarifying question before proposing a solution
+
+2.2 Empathy statement required for any complaint or frustration expressed:
+    Examples:
+    - "I completely understand how frustrating this must be."
+    - "I'm sorry you're experiencing this — let me get this sorted for you."
+    - "That sounds very inconvenient, and I appreciate your patience."
+
+2.3 Agents must NOT rush to solutions before fully understanding the issue.
+    "Resolution rushing" is a quality deduction.
+
+SOP-3: HOLD PROCEDURE
+----------------------
+3.1 Before placing on hold: "May I place you on a brief hold while I look into this?"
+    - Wait for customer confirmation before placing on hold.
+3.2 Hold duration: maximum 2 minutes per hold cycle.
+3.3 Check-back required if hold exceeds 90 seconds: 
+    "Thank you for holding. I'm still working on this — just a moment more."
+3.4 After hold: "Thank you for your patience!"
+
+SOP-4: VERIFICATION PROCEDURE (SOP-4.2)
+-----------------------------------------
+4.1 Ask for:  Full name, then date of birth.
+4.2 If DOB fails: offer PIN or last-4 of phone number.
+4.3 Three failed attempts: lock session and escalate to Tier-2,
+    issue reference ID to customer.
+4.4 Never ask for full SSN, full card number, or password.
+
+SOP-5: PROBLEM RESOLUTION STEPS
+---------------------------------
+5.1 Tier-1 resolution attempt: agent tries to resolve using available tools.
+5.2 If unresolved in 5 minutes: escalate (do NOT keep customer waiting longer).
+5.3 After resolution: walkthrough the solution step-by-step with the customer.
+5.4 Confirm resolution: "Does that resolve your issue today?"
+
+SOP-6: NEGATIVE FEEDBACK HANDLING
+------------------------------------
+6.1 Never be defensive when receiving negative feedback.
+6.2 Acknowledge, apologize (without admitting fault for systemic issues), act.
+    "I'm sorry to hear that. Let me make sure we address this right now."
+6.3 If customer asks for a supervisor, honor within 90 seconds.
+    Do NOT ask for a reason beyond "I'd like to connect you with my supervisor."
+
+SOP-7: DOCUMENTATION & CASE NOTES
+------------------------------------
+7.1 Every interaction requires a case note with:
+    - Issue category (billing / technical / account / general)
+    - Resolution action taken
+    - Follow-up required (yes/no)
+    - Escalation flag (yes/no)
+7.2 Case notes must be completed within 5 minutes of interaction close.
+
+SOP-8: CHAT ETIQUETTE
+-----------------------
+8.1 Response time: within 30 seconds of each customer message.
+8.2 Avoid typing in ALL CAPS (perceived as aggressive).
+8.3 Use complete sentences. No abbreviations (e.g. "plz", "thx") in customer-facing messages.
+8.4 Emoji allowed only in informal follow-up messages, never in complaints handling.
+8.5 Multi-line responses: break into short paragraphs for readability.

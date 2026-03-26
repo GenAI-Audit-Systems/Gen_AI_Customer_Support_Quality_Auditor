@@ -1,77 +1,73 @@
 # 🚀 GenAI-Powered Customer Support Quality Auditor
-## 📍 Milestone 2: Advanced Scoring Engine & Premium UI
 
-![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![Vite](https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)
-![Deepgram](https://img.shields.io/badge/Deepgram-STT-101C26?style=for-the-badge)
-![OpenRouter](https://img.shields.io/badge/OpenRouter-LLM-blue?style=for-the-badge)
-![Framer Motion](https://img.shields.io/badge/Framer_Motion-black?style=for-the-badge&logo=framer)
+Welcome to the **GenAI-Powered Customer Support Quality Auditor**, a comprehensive, full-stack intelligence platform for customer support teams. This project leverages state-of-the-art Generative AI to provide real-time transcription, deep contextual scoring, and automated compliance auditing.
 
-## 📖 Milestone 2 Overview
-Welcome to **Milestone 2** of the GenAI-Powered Customer Support Quality Auditor. 
+## 🏗️ Project Architecture
 
-While Milestone 1 laid the groundwork for basic transcription, Milestone 2 transforms the project into a highly interactive, full-stack application. We have implemented a powerful **Django API backend** integrated with **Deepgram** for high-speed, multi-language transcription and **OpenRouter** (GPT-4o / Claude 3.5 Sonnet) for deep contextual scoring. 
-
-On the frontend, we have adopted a lightning-fast **Vite + React architecture**, styled with a premium **Cyberpunk/Minimalist** design system featuring glassmorphism, dark mode, and smooth Framer Motion animations.
+This project is built with a modern, high-performance stack:
+- **Backend**: Django REST Framework (Python)
+- **Frontend**: Vite + React (JavaScript)
+- **Transcription**: Deepgram Nova-2 (Speech-to-Text)
+- **AI Engine**: OpenRouter (GPT-4o, Claude 3.5 Sonnet)
+- **Vector Database**: Milvus (RAG over Policy Documents)
+- **Database**: PostgreSQL (Neon) with SQLite fallback
 
 ---
 
-## ✨ Key Features Implemented in Milestone 2
+## 🌟 Key Features
 
-### 🎨 Premium Frontend (Vite + React)
-- **Modern UI/UX:** A sleek "Cyberpunk/Minimalist" aesthetic utilizing CSS variables, smooth gradients, dark mode, and glassmorphism.
-- **Drag-and-Drop Upload:** Intuitive audio file upload zone supporting `.m4a`, `.mp3`, and `.wav` formats.
-- **Real-Time Display:** Live transcript rendering paired with interactive charts visualizing sentiment and quality scores.
-- **Fluid Animations:** Powered by **Framer Motion** for elegant entrance/exit animations of results cards and dashboard elements.
+### 1. Advanced Transcription & Diarization
+- High-speed transcription via Deepgram's **Nova-2** model.
+- **Speaker Diarization**: Automatically separates Agent and Customer dialogue.
+- Multi-language support and smart formatting.
 
-### 🧠 Advanced Backend (Django REST API)
-- **Deepgram Diarization:** Enhanced Speech-to-Text (STT) that automatically separates speakers (e.g., distinguishing the Agent from the Customer).
-- **Multi-Language Support:** The transcription layer now supports multiple languages natively via Deepgram.
-- **OpenRouter LLM Integration:** Routes transcripts through top-tier models (GPT-4o or Claude 3.5 Sonnet) to generate strict JSON evaluations.
-- **Audit Scoring:** AI accurately scores metrics including **Empathy, Resolution, Professionalism, and Compliance**.
-- **History Management API:** Endpoints to store and fetch previous audit results.
-- **Export Capabilities:** Instantly export generated audit reports into **PDF format** for supervisors.
+### 2. Multi-Metric AI Scoring
+- **Automated Quality Assurance (AQA)**: Scores interactions on Empathy, Resolution, Professionalism, and Compliance.
+- **Metric Justification**: Detailed rationale for every score given.
+- **Executive Summary**: 2-3 sentence overview of the interaction quality.
 
----
+### 3. RAG-Powered Policy Compliance (Milestone 3)
+- **Retrieval-Augmented Generation (RAG)**: Automatically cross-references transcripts with internal policy documents.
+- **Semantic Search**: Find specific clauses or guidelines within the knowledge base.
+- **Policy Ingestion**: Upload `.txt` or `.md` files to update the auditor's knowledge on-the-fly.
 
-## ⚙️ Architecture & Data Flow
-
-1. **Upload:** User drops an audio file into the React (Vite) frontend.
-2. **Transcription:** The file is sent to the Django backend, which proxies it to the **Deepgram API**. Deepgram returns a highly accurate, multi-language transcript with speaker diarization.
-3. **Analysis:** Django sends the diarized transcript to **OpenRouter** with a strict system prompt. The LLM (Claude 3.5 / GPT-4o) acts as the QA Auditor and returns a structured JSON evaluation.
-4. **Visualization:** The React frontend receives the JSON, triggering Framer Motion animations to reveal Score Cards, Sentiment Charts, and the flagged transcript.
+### 4. Real-time Monitoring & Alerts (Milestone 4)
+- **Live Audit Streaming**: WebSocket-based (Django Channels) turn-by-turn audit feedback.
+- **Smart Alerts**: Multi-channel notifications via Slack/Teams or Email for critical compliance breaches.
+- **Compliance Radar**: Real-time risk prediction based on early call signals.
 
 ---
 
-## 📂 Project Structure
+## 📂 Modules & Component Structure
 
-```text
-Milestone_2/
-│
-├── backend/                       # Django REST API
-│   ├── manage.py
-│   ├── core/                      # Main Django project settings
-│   ├── auditor/                   # App handling transcription & LLM logic
-│   │   ├── views.py               # API endpoints (Upload, History, Export)
-│   │   ├── services/
-│   │   │   ├── deepgram_service.py # Diarization & STT logic
-│   │   │   └── openrouter_service.py# LLM scoring prompts & routing
-│   │   └── models.py              # Database models for Audit History
-│   └── requirements.txt
-│
-├── frontend/                      # React + Vite Application
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── src/
-│   │   ├── components/            
-│   │   │   ├── DragDropZone.jsx   # Audio upload component
-│   │   │   ├── AnimatedScoreCard.jsx # Framer Motion score UI
-│   │   │   └── InteractiveChart.jsx  # Recharts sentiment visualization
-│   │   ├── styles/
-│   │   │   └── theme.css          # Cyberpunk/Glassmorphism CSS variables
-│   │   ├── services/              # Axios API calls to Django
-│   │   └── App.jsx
-│   └── index.html
-│
-└── README.md
+- **/Milestone_2/backend**: Core Django project.
+    - `processor/`: Handles the main transcription and LLM scoring pipeline.
+    - `rag/`: Implements Vector DB (Milvus) logic and retrieval.
+    - `realtime/`: WebSocket consumers for live audit streams.
+    - `alerts/`: Notification dispatch and monitoring logic.
+- **/Milestone_2/frontend**: React + Vite application.
+    - `src/App.jsx`: Main dashboard interface.
+    - `src/styles/theme.css`: Cyberpunk/Glassmorphism design system.
+
+---
+
+## 🛠️ Setup & Installation
+
+### Backend
+1. Navigate to `Milestone_2/backend`.
+2. Create and activate a virtual environment: `python -m venv .venv`.
+3. Install dependencies: `pip install -r requirements.txt`.
+4. Configure `.env` (use `.env.example` as a template).
+5. Run migrations: `python manage.py migrate`.
+6. Start server: `python manage.py runserver`.
+
+### Frontend
+1. Navigate to `Milestone_2/frontend`.
+2. Install dependencies: `npm install`.
+3. Start development server: `npm run dev`.
+
+---
+
+## 📎 License
+Copyright (c) 2026 Vidzai Digital. Licensed under the MIT License.
+Refer to `license.txt` for details.

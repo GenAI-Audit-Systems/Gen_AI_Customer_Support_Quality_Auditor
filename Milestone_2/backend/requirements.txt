@@ -6,3 +6,18 @@ requests
 python-dotenv
 psycopg2-binary
 dj-database-url
+
+# ── Milestone 3: RAG + Vector Store ───────────────────────────────────
+pymilvus>=2.3.0
+#milvus-lite>=2.4.0
+sentence-transformers>=2.7.0
+langchain>=0.1.16
+langchain-community>=0.0.38
+
+# ── Milestone 3: Real-time / WebSocket ────────────────────────────────
+channels>=4.0.0
+daphne>=4.0.0
+
+# ── Milestone 4: Reporting ────────────────────────────────────────────
+reportlab>=4.2.0
+openpyxl>=3.1.2

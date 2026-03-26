@@ -8,5 +8,7 @@ def home(request):
 urlpatterns = [
     path('', home),  # root route
     path('admin/', admin.site.urls),
-    path('api/', include('processor.urls')),
+    path('api/', include('processor.urls')),           # existing — untouched
+    path('api/rag/',    include('rag.urls')),           # Milestone 3 — RAG engine
+    path('api/alerts/', include('alerts.urls')),        # Milestone 4 — alerting
 ]

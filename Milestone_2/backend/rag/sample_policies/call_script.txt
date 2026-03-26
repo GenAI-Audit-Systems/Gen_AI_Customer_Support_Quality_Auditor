@@ -1,0 +1,84 @@
+APPROVED CALL SCRIPT — AI AUDITOR PLATFORM
+Version 2.3 | March 2026
+===========================================
+
+OPENING SCRIPT
+--------------
+Agent: "Thank you for calling [Company] Support. My name is [Name],
+        and I'm happy to help you today. Could I start with your full name please?"
+
+[Wait for response]
+
+Agent: "Thank you, [Customer Name]. Before I access your account,
+        I need to verify your identity. Could you please provide your date of birth?"
+
+[If verification fails]
+Agent: "No problem — as an alternative, could you provide the PIN
+        on your account or the last 4 digits of your registered phone number?"
+
+EMPATHY + ISSUE DISCOVERY
+---------------------------
+Agent: "I'm sorry to hear you're experiencing [restate issue].
+        I completely understand how [frustrating/inconvenient/concerning] that must be.
+        Let me pull up your account and take a closer look."
+
+[Paraphrase back:]
+Agent: "Just to make sure I have this right — you're experiencing [X], 
+        and it's been happening since [Y]. Is that correct?"
+
+HOLD SCRIPT
+-----------
+Agent: "I'd like to place you on a brief hold while I look into this for you.
+        It should only take a minute or two. Is that okay?"
+
+[After hold:]
+Agent: "Thank you so much for your patience. I appreciate you holding."
+
+RESOLUTION DELIVERY
+-------------------
+Agent: "Great news — I've been able to [action taken]. Here's what I did:
+        [Step 1], [Step 2]. This should resolve the issue you were experiencing."
+
+[Walk through confirmation:]
+Agent: "Does that resolve the issue for you today? Is there anything else
+        I can help you with?"
+
+COMPENSATION / GOODWILL SCRIPT (Authorized Tier)
+--------------------------------------------------
+Agent: "As an apology for the inconvenience, I'd like to apply a [amount] credit
+        to your account. You'll see this reflected within 24-48 hours.
+        I hope this helps and thank you for your patience."
+
+ESCALATION SCRIPT
+-----------------
+Agent: "I want to make sure you get the best possible resolution, 
+        so I'm going to connect you with one of our specialist team members.
+        Your reference number for this interaction is [TICKET-ID].
+        Please hold while I transfer you — this should take less than 60 seconds."
+
+LEGAL THREAT SCRIPT (Mandatory)
+--------------------------------
+Agent: "I understand your concerns are serious. I'm going to connect you
+        immediately with our customer relations team who is best equipped 
+        to assist with this matter. Your reference number is [TICKET-ID].
+        I'm transferring you now."
+
+[DO NOT engage in discussion about legal matters. Transfer immediately.]
+
+CLOSURE SCRIPT
+--------------
+Agent: "Is there anything else I can help you with today?"
+
+[Wait for response]
+
+Agent: "Wonderful. Thank you for contacting [Company] support, [Customer Name].
+        I hope you have a great rest of your day. Goodbye!"
+
+[NPS Survey prompt for resolved calls:]
+Agent: "Before we close, you may receive a short survey about your experience today.
+        We'd love your feedback if you have a moment. Thank you again!"
+
+CHAT-SPECIFIC CLOSURE
+----------------------
+Agent: "It was a pleasure assisting you today! If you ever need further help,
+        don't hesitate to reach out. Take care! 😊"

@@ -32,6 +32,14 @@ INSTALLED_APPS = [
     'corsheaders',
 
     'processor',
+
+    # ── Milestone 3 & 4 additions (additive only) ──
+    'channels',
+    'rag.apps.RagConfig',
+
+
+    'alerts.apps.AlertsConfig',
+    'realtime',
 ]
 
 
@@ -75,12 +83,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'django_backend.wsgi.application'
 
 
-# DATABASE (PostgreSQL from Neon)
+# DATABASE (PostgreSQL from Neon with SQLite fallback)
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    DATABASE_URL = f"sqlite:///{str(BASE_DIR / 'db.sqlite3').replace(os.sep, '/')}"
+
 DATABASES = {
     "default": dj_database_url.parse(
-        os.environ.get("DATABASE_URL"),
+        DATABASE_URL,
         conn_max_age=600,
-        ssl_require=True
+        ssl_require=False if "sqlite" in DATABASE_URL else True
     )
 }
 
@@ -125,3 +137,44 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
+
+# ══════════════════════════════════════════════════════════════════════
+# Milestone 3 & 4 — New configuration (additive only)
+# ══════════════════════════════════════════════════════════════════════
+
+# Django Channels — ASGI real-time support
+ASGI_APPLICATION = 'django_backend.routing.application'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    }
+}
+# Production: swap to Redis-backed layer:
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {"hosts": [os.environ.get("REDIS_URL", "redis://localhost:6379")]},
+#     }
+# }
+
+# Milvus vector database
+# Dev/Demo : MILVUS_URI=./milvus_local.db  (Milvus Lite — no server needed)
+# Production: MILVUS_URI=grpc://milvus:19530 (Milvus Standalone)
+MILVUS_URI = os.environ.get("MILVUS_URI")
+if not MILVUS_URI:
+    try:
+        import milvus_lite
+        MILVUS_URI = "./milvus_local.db"
+    except ImportError:
+        # Default to a mock/empty URI to avoid pymilvus validation errors during startup if no server is intended
+        MILVUS_URI = "http://localhost:19530" 
+
+MILVUS_TOKEN = os.environ.get("MILVUS_TOKEN", "")
+
+# Alert dispatch
+ALERT_WEBHOOK_URL = os.environ.get("ALERT_WEBHOOK_URL", "")
+
+# LLM Provider (openrouter | openai | groq | together)
+ACTIVE_LLM_PROVIDER  = os.environ.get("ACTIVE_LLM_PROVIDER", "openrouter")
+MAX_TOKENS_PER_AUDIT = os.environ.get("MAX_TOKENS_PER_AUDIT", "1500")
