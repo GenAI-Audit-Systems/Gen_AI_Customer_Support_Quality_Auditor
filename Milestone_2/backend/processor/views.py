@@ -17,7 +17,7 @@ import io
 load_dotenv()
 
 # ==============================
-# 🔑 API KEYS (From .env)
+# API KEYS (From .env)
 # ==============================
 DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -26,7 +26,7 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL_NAME = "openai/gpt-3.5-turbo"
 
 # ==============================
-# 🎧 TRANSCRIBE USING DEEPGRAM (With Diarization)
+# TRANSCRIBE USING DEEPGRAM (With Diarization)
 # ==============================
 
 def transcribe_with_deepgram(file_content):
@@ -74,7 +74,7 @@ def transcribe_with_deepgram(file_content):
 
 
 # ==============================
-# 🤖 QUALITY AUDIT ANALYSIS (Detailed Scoring)
+# QUALITY AUDIT ANALYSIS (Detailed Scoring)
 # ==============================
 
 def perform_quality_audit(input_text):
@@ -82,12 +82,25 @@ def perform_quality_audit(input_text):
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
         "HTTP-Referer": "http://localhost",
-        "X-Title": "Support Quality Auditor Milestone 2"
+        "X-Title": "AI Quality Auditor"
     }
 
     system_prompt = """
-You are a lead Quality Auditor for a customer support center.
-Analyze the provided conversation and provide a detailed audit in JSON format.
+You are a senior Quality Auditor and Compliance Officer for a customer support center.
+Analyze the provided conversation VERY CAREFULLY for quality AND compliance violations.
+
+COMPLIANCE RED FLAGS you MUST detect (list ALL that apply in compliance_issues):
+- PII/Data exposure: Agent asks for or accepts full credit card numbers, SSNs, passwords
+- Policy misrepresentation: Agent contradicts official policies (e.g. wrong refund timelines)
+- Coercion/intimidation: Agent discourages complaints, threatens delays, pressures customer
+- Lack of verification: Agent skips identity verification before accessing accounts
+- Unprofessional conduct: Dismissive language, belittling the customer's concerns
+- Unauthorized promises: Agent offers deals/workarounds outside standard procedure
+- Missing confirmation: Agent fails to provide confirmation emails/reference numbers
+- Escalation refusal: Agent refuses to transfer to supervisor when requested
+
+Score STRICTLY — a conversation with multiple violations should get compliance 1-3/10, overall_score below 30.
+
 STRICT JSON STRUCTURE (all fields required):
 {
   "summary": "2-3 sentence summary of the interaction",
@@ -98,10 +111,10 @@ STRICT JSON STRUCTURE (all fields required):
     "compliance": 0-10
   },
   "metric_justifications": {
-    "empathy": "1-2 sentence explanation of why this empathy score was given",
-    "resolution": "1-2 sentence explanation of why this resolution score was given",
-    "professionalism": "1-2 sentence explanation of why this professionalism score was given",
-    "compliance": "1-2 sentence explanation of why this compliance score was given"
+    "empathy": "1-2 sentence explanation with evidence",
+    "resolution": "1-2 sentence explanation with evidence",
+    "professionalism": "1-2 sentence explanation with evidence",
+    "compliance": "1-2 sentence explanation with evidence"
   },
   "overall_score": 0-100,
   "sentiment": "Positive/Neutral/Negative",
@@ -109,7 +122,7 @@ STRICT JSON STRUCTURE (all fields required):
   "call_outcome": "Resolved/Partially Resolved/Unresolved/Escalated",
   "key_findings": ["Finding 1", "Finding 2", "Finding 3"],
   "improvement_tips": ["Tip 1", "Tip 2", "Tip 3"],
-  "compliance_issues": []
+  "compliance_issues": ["List EVERY SINGLE compliance violation detected. THIS MUST NOT BE EMPTY IF compliance SCORE < 10"]
 }
 Only return valid JSON. No extra text.
 """
@@ -139,7 +152,7 @@ Only return valid JSON. No extra text.
     return json.loads(content)
 
 # ==============================
-# 🚀 API VIEWS
+# API VIEWS
 # ==============================
 
 class AudioProcessView(APIView):
@@ -154,8 +167,10 @@ class AudioProcessView(APIView):
             # 1. Transcription
             transcription_data = transcribe_with_deepgram(file_obj.read())
             
-            # 2. Audit
-            audit_results = perform_quality_audit(transcription_data["full_text"])
+            # 2. RAG Audit
+            from rag.rag_engine import get_engine
+            engine = get_engine()
+            audit_results = engine.perform_rag_audit(transcription_data["full_text"], "default")
             
             # 3. Persistence
             audit_record = AuditResult.objects.create(
@@ -167,11 +182,20 @@ class AudioProcessView(APIView):
                 sentiment=audit_results.get("sentiment", "Neutral")
             )
             
+            # TRIGGER ALERTS ENGINE automatically
+            try:
+                from alerts.alert_engine import evaluate_audit
+                evaluate_audit(audit_record.id, audit_results, file_obj.name)
+            except Exception as e:
+                print(f"[AlertEngine] Failed to generate alerts: {e}")
+            
             return Response({
                 "id": audit_record.id,
                 "source": "audio",
                 "transcript": transcription_data,
-                "audit": audit_results
+                "audit": audit_results,
+                "policy_context": audit_results.get("policy_context", []),
+                "rag_coverage": audit_results.get("rag_coverage", 0.0)
             })
         except Exception as e:
             return Response({"error": str(e)}, status=500)
@@ -208,7 +232,14 @@ class TextProcessView(APIView):
                 overall_score=audit_results.get("overall_score", 0),
                 sentiment=audit_results.get("sentiment", "Neutral")
             )
-
+            
+            # TRIGGER ALERTS ENGINE automatically
+            try:
+                from alerts.alert_engine import evaluate_audit
+                evaluate_audit(audit_record.id, audit_results, file_obj.name if file_obj else "Direct Input")
+            except Exception as e:
+                print(f"[AlertEngine] Failed to generate alerts: {e}")
+                
             return Response({
                 "id": audit_record.id,
                 "source": "text",

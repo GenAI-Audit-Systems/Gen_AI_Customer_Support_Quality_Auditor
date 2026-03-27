@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════
-# Compliance Alert Engine — Milestone 4
+# Compliance Alert Engine
 # Rule evaluation, severity classification, PII masking, webhook dispatch
 # Circuit breaker + retry queue for external delivery
 # ══════════════════════════════════════════════════════════════════════

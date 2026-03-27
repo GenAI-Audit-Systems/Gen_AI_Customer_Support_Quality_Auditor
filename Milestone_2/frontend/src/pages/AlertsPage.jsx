@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { GlassPanel } from "../components/m3/GlassPanel";
+import { GlassPanel } from "../components/ui/GlassPanel";
+import { BarChart3, AlertTriangle, FileText } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/";
 
@@ -55,11 +56,11 @@ export default function AlertsPage() {
           onClick={() => downloadReport("excel")}
           style={{ background: "#10b981", border: "none", color: "#fff", padding: "10px 20px", borderRadius: 8, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
         >
-          <span>📊</span> Export Analytics (Excel)
+          <BarChart3 size={16} style={{ marginRight: 6 }} /> Export Analytics (Excel)
         </button>
       </header>
 
-      <GlassPanel title="🚨 Compliance Violations Log">
+      <GlassPanel title={<><AlertTriangle size={16} style={{marginRight:8, verticalAlign:"middle"}} /> Compliance Violations Log</>}>
         {loading ? (
           <div style={{ color: "#94a3b8", padding: 20 }}>Loading alerts...</div>
         ) : alerts.length === 0 ? (
@@ -96,7 +97,7 @@ export default function AlertsPage() {
                       onClick={() => downloadReport("pdf", a.audit_id)}
                       style={{ background: "transparent", border: "1px solid #6366f1", color: "#a78bfa", padding: "4px 12px", borderRadius: 4, cursor: "pointer", fontSize: 12 }}
                     >
-                      📄 Get PDF
+                      <FileText size={12} style={{ marginRight: 4 }} /> Get PDF
                     </button>
                   </td>
                   <td>

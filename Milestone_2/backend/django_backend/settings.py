@@ -7,6 +7,12 @@ import os
 from pathlib import Path
 import dj_database_url
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -14,13 +20,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "temporary-secret-key")
 
-DEBUG = False
+DEBUG = os.environ.get("DEBUG", "True").lower() in ("true", "1", "yes")
 
 ALLOWED_HOSTS = ["*"]
 
 
 # APPLICATIONS
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -33,7 +40,7 @@ INSTALLED_APPS = [
 
     'processor',
 
-    # ── Milestone 3 & 4 additions (additive only) ──
+    # ── Additional features ──
     'channels',
     'rag.apps.RagConfig',
 
@@ -139,7 +146,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
 
 # ══════════════════════════════════════════════════════════════════════
-# Milestone 3 & 4 — New configuration (additive only)
+# ── RAG & Alerts Configuration ──
 # ══════════════════════════════════════════════════════════════════════
 
 # Django Channels — ASGI real-time support

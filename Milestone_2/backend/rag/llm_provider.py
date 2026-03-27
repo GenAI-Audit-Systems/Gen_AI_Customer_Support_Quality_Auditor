@@ -55,7 +55,7 @@ class LLMProvider:
         }
         if provider == "openrouter":
             headers["HTTP-Referer"] = "http://localhost"
-            headers["X-Title"]      = "AI Auditor M3"
+            headers["X-Title"]      = "AI Quality Auditor"
         return headers
 
     def complete(self, messages: list, temperature: float = 0.3) -> str:

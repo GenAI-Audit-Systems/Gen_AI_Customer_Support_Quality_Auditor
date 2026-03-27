@@ -80,10 +80,12 @@ class RAGAuditView(APIView):
         content  = request.data.get("content", "")
         tenant   = request.data.get("tenant_id", "default")
         file_obj = request.FILES.get("file")
+        filename = "direct_input"
 
         if file_obj:
             try:
                 content = file_obj.read().decode("utf-8")
+                filename = file_obj.name
             except Exception:
                 return Response({"error": "Could not read file."}, status=400)
 
@@ -91,22 +93,36 @@ class RAGAuditView(APIView):
             return Response({"error": "No transcript content provided."}, status=400)
 
         try:
+            # Parse transcript into dialogue turns
+            from processor.utils import split_transcript_by_speaker
+            transcript_data = split_transcript_by_speaker(content)
+
             engine = get_engine()
             audit  = engine.perform_rag_audit(content, tenant)
 
-            # Persist to Neon (same model as existing pipeline)
+            # Persist to DB (same model as existing pipeline)
             from processor.models import AuditResult
             record = AuditResult.objects.create(
                 source_type="text",
-                filename=f"rag_audit_{int(time.time())}",
-                transcript_json={"full_text": content, "dialogue": []},
+                filename=filename,
+                transcript_json=transcript_data,
                 audit_json=audit,
                 overall_score=audit.get("overall_score", 0),
                 sentiment=audit.get("sentiment", "Neutral"),
             )
+            
+            # TRIGGER ALERTS ENGINE automatically
+            try:
+                from alerts.alert_engine import evaluate_audit
+                evaluate_audit(record.id, audit, filename)
+            except Exception as e:
+                print(f"[AlertEngine] Failed to generate alerts: {e}")
+                
             return Response({
                 "id":             record.id,
                 "source":         "rag_audit",
+                "content":        content,
+                "transcript":     transcript_data,
                 "audit":          audit,
                 "policy_context": audit.get("policy_context", []),
                 "rag_coverage":   audit.get("rag_coverage", 0.0),

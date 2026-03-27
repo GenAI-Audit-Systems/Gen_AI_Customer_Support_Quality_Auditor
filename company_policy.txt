@@ -1,0 +1,22 @@
+# Copilot / AI Auditor Enterprise Support Policy
+
+1.  Greeting & Opening Policy
+    - Agent must greet the customer politely and offer assistance.
+2.  Empathy Policy
+    - Agent must acknowledge customer issues with understanding and concern.
+3.  Verification Policy
+    - Agent must verify customer/order details before proceeding.
+4.  Policy Compliance (Return/Refund Policy)
+    - Agent must correctly apply and communicate company policies (e.g., 7-day return window).
+5.  Transparency Policy
+    - Agent must clearly explain available options and processes.
+6.  Resolution Policy
+    - Agent must take appropriate action to resolve the issue efficiently.
+7.  Timeline Communication Policy
+    - Agent must provide accurate timelines for resolution (refunds, pickups, etc.).
+8.  Process Clarity Policy
+    - Agent must explain next steps clearly (returns, pickup instructions).
+9.  Professional Communication Policy
+    - Agent must maintain polite, respectful, and clear communication throughout.
+10. Closing Policy
+    - Agent must close the conversation politely and offer further assistance.

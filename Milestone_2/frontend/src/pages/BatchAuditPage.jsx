@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, FileText, BarChart3, CheckCircle2, AlertCircle,
   Download, History, Shield, X, Mic, MessageSquare, Sparkles,
-  TrendingUp, Clock, ChevronRight, Award, Zap, Target, Star
+  TrendingUp, Clock, ChevronRight, Award, Zap, Target, Star, BookOpen
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -94,9 +94,15 @@ export default function App() {
     setLoading(true); setError(null); setResult(null);
     const fd = new FormData(); fd.append('file', f);
     try {
-      const ep = f.type.includes('audio') ? 'process-audio/' : 'process-text/';
-      const { data } = await axios.post(API_BASE + ep, fd);
-      setResult(data); fetchHistory();
+      if (f.type.includes('audio')) {
+        // Audio files go through Deepgram transcription pipeline
+        const { data } = await axios.post(API_BASE + 'process-audio/', fd);
+        setResult(data); fetchHistory();
+      } else {
+        // Text files go through RAG-powered audit (policy-aware)
+        const { data } = await axios.post(API_BASE + 'rag/audit/', fd);
+        setResult(data); fetchHistory();
+      }
     } catch (err) { setError(err.response?.data?.error || 'Error processing file.'); }
     finally { setLoading(false); }
   };
@@ -248,6 +254,7 @@ export default function App() {
     { id: 'transcript', label: 'Transcript', icon: MessageSquare },
     { id: 'findings', label: 'Findings', icon: Target },
     { id: 'compliance', label: 'Compliance', icon: Shield },
+    { id: 'evidence', label: 'Policy Evidence', icon: BookOpen },
   ];
 
   /* ── NAV ── */
@@ -256,7 +263,6 @@ export default function App() {
       <nav style={{
         background: 'rgba(5,7,15,0.88)', backdropFilter: 'blur(20px)',
         borderBottom: '1px solid rgba(99,102,241,0.12)',
-        position: 'sticky', top: 0, zIndex: 100,
         padding: '0 2rem', height: 60,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
@@ -298,9 +304,6 @@ export default function App() {
               <button onClick={() => setDiag(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#334155' }}><X size={11} /></button>
             </motion.div>
           )}
-          <a href="/m3" className="btn" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', border: 'none', textDecoration: 'none' }}>
-            <Sparkles size={13} /> M3 Dashboard
-          </a>
           <button className="btn" onClick={testConn}>
             {diagLoading ? <span className="spin" style={{ width: 12, height: 12, border: '2px solid #6366f1', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block' }} /> : <Shield size={13} />}
             Test API
@@ -370,7 +373,7 @@ export default function App() {
                       ))}
                     </div>
                     <p style={{ fontWeight: 700, fontSize: 13, color: '#cbd5e1', marginBottom: 4 }}>Click to upload</p>
-                    <p style={{ fontSize: 10, color: '#334155', fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase' }}>MP3 · M4A · WAV · TXT</p>
+                    <p style={{ fontSize: 10, color: '#334155', fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase' }}>MP3 · WAV · TXT</p>
                   </>
                 )}
               </div>
@@ -801,6 +804,73 @@ export default function App() {
                         </div>
                       </motion.div>
                     )}
+
+                    {/* ─ TAB: POLICY EVIDENCE ─ */}
+                    {activeTab === 'evidence' && (
+                      <motion.div key="ev" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                        style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+                        {/* RAG Coverage Badge */}
+                        <div className="gc" style={{ padding: '1.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <BookOpen size={16} color="#6366f1" />
+                              <p style={{ fontSize: 11, fontWeight: 800, color: '#475569', letterSpacing: '.12em', textTransform: 'uppercase' }}>Policy Evidence Retrieved</p>
+                            </div>
+                            {result?.rag_coverage != null && (
+                              <span className="badge b-green" style={{ fontSize: 11 }}>
+                                Coverage: {(result.rag_coverage * 100).toFixed(0)}%
+                              </span>
+                            )}
+                          </div>
+
+                          {(result?.policy_context && result.policy_context.length > 0) ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                              {result.policy_context.map((chunk, i) => (
+                                <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * .06 }}
+                                  style={{ padding: '14px 16px', background: 'rgba(99,102,241,.04)', borderRadius: 14, border: '1px solid rgba(99,102,241,.12)' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                    <span style={{ fontSize: 11, fontWeight: 800, color: '#6366f1', background: 'rgba(99,102,241,.15)', padding: '2px 10px', borderRadius: 6 }}>
+                                      {chunk.source_file || chunk.doc_type || 'Policy'}
+                                    </span>
+                                    <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>
+                                      Similarity: {((chunk.similarity || 0) * 100).toFixed(0)}%
+                                    </span>
+                                  </div>
+                                  <p style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.7, fontWeight: 500 }}>
+                                    {chunk.text || chunk.content || JSON.stringify(chunk)}
+                                  </p>
+                                </motion.div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div style={{ textAlign: 'center', padding: '3rem 2rem', color: '#475569' }}>
+                              <BookOpen size={36} color="#334155" style={{ marginBottom: 12 }} />
+                              <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>No Policy Documents Loaded</p>
+                              <p style={{ fontSize: 12, maxWidth: 380, margin: '0 auto', lineHeight: 1.6 }}>
+                                Upload policy/SOP documents via the Policy Management endpoint to enable evidence-based compliance auditing with citations.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Policy References from audit */}
+                        {audit.policy_references && audit.policy_references.length > 0 && (
+                          <div className="gc" style={{ padding: '1.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
+                              <FileText size={14} color="#a78bfa" />
+                              <p style={{ fontSize: 11, fontWeight: 800, color: '#475569', letterSpacing: '.12em', textTransform: 'uppercase' }}>Referenced Policies</p>
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                              {audit.policy_references.map((ref, i) => (
+                                <span key={i} className="badge b-violet" style={{ fontSize: 11 }}>{ref}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+
                   </AnimatePresence>
                 </motion.div>
               )}

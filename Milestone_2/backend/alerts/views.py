@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════
-# Alerts API Views — Milestone 4
+# Alerts API Views
 # POST /api/alerts/check/         — evaluate audit → create alerts
 # GET  /api/alerts/history/       — paginated alert list
 # GET  /api/alerts/report/pdf/<id>/  — PDF download

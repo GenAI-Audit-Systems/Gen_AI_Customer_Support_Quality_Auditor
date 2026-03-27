@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, AreaChart, Area, XAxis, Tooltip } from "recharts";
-import { GlassPanel } from "../components/m3/GlassPanel";
+import { GlassPanel } from "../components/ui/GlassPanel";
+import { AlertTriangle, Users, Target, Thermometer } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/";
 
@@ -58,7 +59,7 @@ export default function SupervisorDashboard() {
       </header>
 
       {/* Alerts Ticker */}
-      <GlassPanel title="🚨 Recent Compliance Alerts" delayed={0.1} style={{ marginBottom: 24, padding: "16px 24px" }}>
+      <GlassPanel title={<><AlertTriangle size={16} style={{marginRight:8, verticalAlign:"middle"}} /> Recent Compliance Alerts</>} delayed={0.1} style={{ marginBottom: 24, padding: "16px 24px" }}>
         <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 8 }}>
           {alerts.length === 0 ? <span style={{color: "#64748b"}}>No recent alerts.</span> : 
            alerts.map(a => (
@@ -75,7 +76,7 @@ export default function SupervisorDashboard() {
 
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, alignItems: "start" }}>
         {/* Agent Grid */}
-        <GlassPanel title="👥 Agent Performance Grid" delayed={0.2}>
+        <GlassPanel title={<><Users size={16} style={{marginRight:8, verticalAlign:"middle"}} /> Agent Performance Grid</>} delayed={0.2}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
               <tr style={{ color: "#94a3b8", textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
@@ -114,7 +115,7 @@ export default function SupervisorDashboard() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           {/* Radar */}
-          <GlassPanel title={`🎯 Top Agent: ${topAgent.agent_id?.substring(0,8) || "N/A"}`} delayed={0.3} style={{ height: 300 }}>
+          <GlassPanel title={<><Target size={16} style={{marginRight:8, verticalAlign:"middle"}} /> Top Agent: {topAgent.agent_id?.substring(0,8) || "N/A"}</>} delayed={0.3} style={{ height: 300 }}>
              <ResponsiveContainer width="100%" height="100%">
               <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
                 <PolarGrid stroke="rgba(255,255,255,0.1)" />
@@ -126,7 +127,7 @@ export default function SupervisorDashboard() {
           </GlassPanel>
           
           {/* Sentiment Heatmap preview */}
-          <GlassPanel title="🌡️ Sentiment Volumes" delayed={0.4} style={{ height: 200 }}>
+          <GlassPanel title={<><Thermometer size={16} style={{marginRight:8, verticalAlign:"middle"}} /> Sentiment Volumes</>} delayed={0.4} style={{ height: 200 }}>
              {heatmap.length === 0 ? <p style={{color: "#64748b"}}>No data.</p> :
               <ResponsiveContainer width="100%" height="100%">
                  <AreaChart data={heatmap.slice(-10)}>

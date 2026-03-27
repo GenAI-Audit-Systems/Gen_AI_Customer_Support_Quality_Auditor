@@ -1,17 +1,30 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import App from './App.jsx'
-import Milestone3App from './Milestone3App.jsx'
+import MainLayout from './MainLayout.jsx'
+import BatchAuditPage from './pages/BatchAuditPage.jsx'
+import SupervisorDashboard from './pages/SupervisorDashboard.jsx'
+import LiveAuditPage from './pages/LiveAuditPage.jsx'
+import AlertsPage from './pages/AlertsPage.jsx'
+import CopilotPage from './pages/CopilotPage.jsx'
+import { CopilotProvider } from './context/CopilotContext.jsx'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route path="m3/*" element={<Milestone3App />} />
-        <Route path="*" element={<App />} />
-      </Routes>
-    </BrowserRouter>
+    <CopilotProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<SupervisorDashboard />} />
+            <Route path="audit" element={<BatchAuditPage />} />
+            <Route path="batch" element={<BatchAuditPage />} />
+            <Route path="live" element={<LiveAuditPage />} />
+            <Route path="alerts" element={<AlertsPage />} />
+            <Route path="copilot" element={<CopilotPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </CopilotProvider>
   </React.StrictMode>,
 )

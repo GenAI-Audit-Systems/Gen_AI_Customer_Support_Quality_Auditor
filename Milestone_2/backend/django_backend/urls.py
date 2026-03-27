@@ -9,6 +9,6 @@ urlpatterns = [
     path('', home),  # root route
     path('admin/', admin.site.urls),
     path('api/', include('processor.urls')),           # existing — untouched
-    path('api/rag/',    include('rag.urls')),           # Milestone 3 — RAG engine
-    path('api/alerts/', include('alerts.urls')),        # Milestone 4 — alerting
+    path('api/rag/',    include('rag.urls')),
+    path('api/alerts/', include('alerts.urls')),
 ]

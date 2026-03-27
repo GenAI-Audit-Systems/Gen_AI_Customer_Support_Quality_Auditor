@@ -128,6 +128,9 @@ class RAGEngine:
         if vectors:
             col.insert([contents, vectors, doc_types, tenants, indices, sources])
             col.flush()
+            # Clear retrieval cache so new policies apply instantly
+            with _cache_lock:
+                _cache.clear()
         return len(vectors)
 
     # ── Policy retrieval ───────────────────────────────────────────────
@@ -176,19 +179,26 @@ class RAGEngine:
     ) -> Tuple[str, List[dict]]:
         """Build an LLM prompt augmented with retrieved policy context."""
         policy_chunks = self.query_policy(transcript[:512], tenant_id, k)
+        
         if policy_chunks:
             policy_text = "\n\n".join(
                 f"[Policy: {c['doc_type']} / {c['source_file']}]\n{c['content']}"
                 for c in policy_chunks
             )
-            augmented_prompt = (
-                f"Relevant compliance policies and SOPs for context:\n"
-                f"{policy_text}\n\n"
-                f"---\n\n"
-                f"Conversation transcript:\n{transcript}"
-            )
+            context_block = f"Relevant compliance policies and SOPs for context:\n{policy_text}"
         else:
-            augmented_prompt = f"Conversation transcript:\n{transcript}"
+            # Industry-standard fallback context
+            context_block = (
+                "No specific local policies found. Apply industry-standard customer support best practices: "
+                "Verify identity if required, remain professional, show empathy, confirm resolution, "
+                "and ensure data privacy (PII protection)."
+            )
+
+        augmented_prompt = (
+            f"{context_block}\n\n"
+            f"---\n\n"
+            f"Conversation transcript:\n{transcript}"
+        )
         return augmented_prompt, policy_chunks
 
     # ── Conversation memory ────────────────────────────────────────────
@@ -249,17 +259,30 @@ class RAGEngine:
         augmented_prompt, policy_chunks = self.augmented_audit_prompt(transcript, tenant_id)
 
         system_prompt = """
-You are a lead Quality Auditor with access to compliance policies and SOPs.
-Analyze the conversation using the provided policy context.
-Return STRICT JSON:
+You are a senior Quality Auditor and Compliance Officer for a customer support operation.
+Analyze the conversation transcript VERY CAREFULLY for quality AND compliance violations.
+
+COMPLIANCE RED FLAGS you MUST detect (list ALL that apply in compliance_issues):
+- PII/Data exposure: Agent asks for or accepts full credit card numbers, SSNs, passwords
+- Policy misrepresentation: Agent contradicts official policies (e.g. wrong refund timelines)
+- Coercion/intimidation: Agent discourages complaints, threatens delays, pressures customer
+- Lack of verification: Agent skips identity verification before accessing accounts
+- Unprofessional conduct: Dismissive language, belittling the customer's concerns
+- Unauthorized promises: Agent offers deals/workarounds outside standard procedure
+- Missing confirmation: Agent fails to provide confirmation emails/reference numbers
+- Escalation refusal: Agent refuses to transfer to supervisor when requested
+
+Score STRICTLY — a conversation with multiple violations should get compliance 1-3/10, overall_score below 30.
+
+Return STRICT JSON (no markdown, no extra text):
 {
-  "summary": "2-3 sentence summary",
+  "summary": "2-3 sentence executive summary",
   "scores": {
     "empathy": 0-10, "resolution": 0-10,
     "professionalism": 0-10, "compliance": 0-10
   },
   "metric_justifications": {
-    "empathy": "1-2 sentences citing policy evidence if available",
+    "empathy": "1-2 sentences with evidence",
     "resolution": "...", "professionalism": "...", "compliance": "..."
   },
   "overall_score": 0-100,
@@ -268,7 +291,7 @@ Return STRICT JSON:
   "call_outcome": "Resolved/Partially Resolved/Unresolved/Escalated",
   "key_findings": ["Finding 1", "Finding 2", "Finding 3"],
   "improvement_tips": ["Tip 1", "Tip 2", "Tip 3"],
-  "compliance_issues": [],
+  "compliance_issues": ["List EVERY SINGLE compliance violation detected. THIS MUST NOT BE EMPTY IF compliance SCORE < 10"],
   "policy_references": ["Source 1", "Source 2"],
   "rag_coverage": 0.0
 }
@@ -279,7 +302,28 @@ Only return valid JSON. No extra text.
             {"role": "user",    "content": augmented_prompt},
         ]
         content = llm_complete(messages)
-        audit   = json.loads(content)
+
+        # Robust JSON extraction — handle markdown fences and extra text
+        try:
+            audit = json.loads(content)
+        except json.JSONDecodeError:
+            # Try extracting JSON from markdown code fences
+            match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', content, re.DOTALL)
+            if match:
+                try:
+                    audit = json.loads(match.group(1))
+                except json.JSONDecodeError:
+                    audit = self._fallback_audit(content)
+            else:
+                # Try finding first { ... } in the text
+                brace_match = re.search(r'\{.*\}', content, re.DOTALL)
+                if brace_match:
+                    try:
+                        audit = json.loads(brace_match.group(0))
+                    except json.JSONDecodeError:
+                        audit = self._fallback_audit(content)
+                else:
+                    audit = self._fallback_audit(content)
 
         # Annotate with RAG metadata
         audit["policy_context"] = policy_chunks
@@ -289,6 +333,22 @@ Only return valid JSON. No extra text.
             audit["rag_coverage"] = round(len(policy_chunks) / max(len(policy_chunks), 1), 2)
 
         return audit
+
+    def _fallback_audit(self, raw_text: str) -> dict:
+        """Return a structured fallback when LLM output isn't valid JSON."""
+        return {
+            "summary": raw_text[:500] if raw_text else "Audit analysis completed.",
+            "scores": {"empathy": 5, "resolution": 5, "professionalism": 5, "compliance": 5},
+            "overall_score": 50,
+            "sentiment": "Neutral",
+            "agent_performance": "Satisfactory",
+            "call_outcome": "Partially Resolved",
+            "key_findings": ["LLM returned non-structured output"],
+            "improvement_tips": ["Review transcript manually for detailed insights"],
+            "compliance_issues": [],
+            "policy_references": [],
+            "rag_coverage": 0.0,
+        }
 
     # ── Risk prediction (pre-audit) ────────────────────────────────────
     def predict_compliance_risk(self, transcript: str) -> dict:
@@ -354,16 +414,18 @@ Only return valid JSON.
         """Answer a supervisor analytics question using RAG + history context."""
         policy_chunks = self.query_policy(question, k=3)
         policy_text   = "\n".join(c["content"][:300] for c in policy_chunks)
+        
         messages = [
             {"role": "system", "content": (
                 "You are an AI Supervisor Copilot for a customer support quality platform.\n"
                 "Answer the supervisor's question using the provided data.\n"
-                "Be concise, factual, and cite policy references where applicable.\n"
+                "If data is missing, use your general knowledge to provide a helpful, professional "
+                "response about customer support management.\n"
                 "Return JSON: {\"answer\": \"...\", \"confidence\": 0-1, \"references\": [...]}"
             )},
             {"role": "user", "content": (
-                f"Policy context:\n{policy_text or 'None available'}\n\n"
-                f"Historical audit data:\n{history_context[:1000] or 'None provided'}\n\n"
+                f"Policy context:\n{policy_text or 'No specific policies retrieved for this query.'}\n\n"
+                f"Historical audit data:\n{history_context[:1500] or 'No historical audit data available yet.'}\n\n"
                 f"Supervisor question: {question}"
             )},
         ]
@@ -371,7 +433,7 @@ Only return valid JSON.
             content = llm_complete(messages)
             result  = json.loads(content)
         except Exception as e:
-            result  = {"answer": "Unable to process request.", "error": str(e), "confidence": 0}
+            result  = {"answer": "I'm having trouble processing that right now.", "error": str(e), "confidence": 0}
         result["policy_context"] = policy_chunks
         return result
 

@@ -2,39 +2,64 @@ import re
 
 def split_transcript_by_speaker(text: str) -> dict:
     """
-    Parses a plain text transcript and splits it into a dialogue list
-    based on speaker labels like [Agent]: or Customer:.
+    Parses a plain text transcript and splits it into a dialogue list.
+    Handles formats like:
+      Agent: Hello...
+      Customer: Hi...
+      [Agent]: Hello...
+      Agent — Hello...
     """
-    # Regex to match patterns like [Speaker]: or Speaker: at the start of a line or after a newline
-    # Patterns: [Agent], Agent:, [Customer], Customer:, [Unknown]:, etc.
-    pattern = r'(?:^|\n)(?:\[?([\w\s]+)\]?:\s*)'
-    
-    parts = re.split(pattern, text)
-    
-    # re.split with capturing groups returns [prefix, group1, content1, group2, content2, ...]
-    # If the text starts with a speaker, the first element (prefix) will be empty.
-    
     dialogue = []
     full_text_parts = []
-    
-    # First part is text before any speaker label (if any)
-    initial_text = parts[0].strip()
-    if initial_text:
-        dialogue.append({"speaker": "Unknown", "text": initial_text})
-        full_text_parts.append(f"[Unknown]: {initial_text}")
 
-    # Iterate through speaker/text pairs
+    # Better to split by speaker boundaries anywhere in the text
+    speaker_regex = re.compile(
+        r'\[?\b(Agent|Customer|Caller|Representative|Support|Rep|User|Bot)\b\]?\s*[:\-—]',
+        re.IGNORECASE
+    )
+    
+    parts = speaker_regex.split(text)
+    
+    current_speaker = "Unknown"
+    current_text = []
+
+    if parts and parts[0].strip() and not speaker_regex.match(parts[0]):
+        # The text before the first identified speaker
+        current_text.append(parts[0].strip())
+
     for i in range(1, len(parts), 2):
-        speaker = parts[i].strip()
-        message = parts[i+1].strip() if i+1 < len(parts) else ""
+        speaker_raw = parts[i].strip()
+        speech = parts[i + 1].strip() if i + 1 < len(parts) else ""
         
-        if speaker and message:
-            dialogue.append({"speaker": speaker, "text": message})
-            full_text_parts.append(f"[{speaker}]: {message}")
+        # Save previous speaker's content if we are moving to a new speaker turn
+        if current_speaker != "Unknown" and current_text:
+            combined = " ".join(current_text).strip()
+            if combined:
+                dialogue.append({"speaker": current_speaker, "text": combined})
+                full_text_parts.append(f"[{current_speaker}]: {combined}")
+            current_text = []
+
+        # Normalize speaker
+        s_lower = speaker_raw.lower()
+        if s_lower in ("agent", "representative", "support", "rep", "bot"):
+            current_speaker = "Agent"
+        elif s_lower in ("customer", "caller", "user"):
+            current_speaker = "Customer"
+        else:
+            current_speaker = speaker_raw.title()
+            
+        current_text.append(speech)
+
+    # Flush last speaker
+    if current_speaker != "Unknown" and current_text:
+        combined = " ".join(current_text).strip()
+        if combined:
+            dialogue.append({"speaker": current_speaker, "text": combined})
+            full_text_parts.append(f"[{current_speaker}]: {combined}")
 
     if not dialogue:
-        # Fallback for plain text without labels
-        return {"full_text": text, "dialogue": [{"speaker": "Unknown", "text": text}]}
+        # Fallback if no specific tags found
+        return {"full_text": text.strip(), "dialogue": []}
 
     return {
         "full_text": "\n".join(full_text_parts),
