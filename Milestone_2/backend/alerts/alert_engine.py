@@ -18,7 +18,7 @@ DEFAULT_RULES = [
         "name":        "critical_compliance_failure",
         "severity":    "CRITICAL",
         "description": "Compliance score below 5 — immediate review required.",
-        "check":       lambda a: (a.get("scores") or {}).get("compliance", 10) < 5,
+        "check":       lambda a: a.get("metrics", {}).get("Compliance", {}).get("score", 10) < 5 or (a.get("scores", {}).get("compliance", 10) < 5),
     },
     {
         "name":        "low_overall_score",
@@ -29,14 +29,14 @@ DEFAULT_RULES = [
     {
         "name":        "compliance_issues_detected",
         "severity":    "INFO",
-        "description": "One or more compliance issues flagged by the LLM.",
-        "check":       lambda a: len(a.get("compliance_issues") or []) > 0,
+        "description": "Compliance issues flagged by the AI Auditor.",
+        "check":       lambda a: len(a.get("violations") or a.get("compliance_issues") or []) > 0,
     },
     {
         "name":        "poor_empathy",
         "severity":    "WARNING",
         "description": "Empathy score below 4 — coaching recommended.",
-        "check":       lambda a: (a.get("scores") or {}).get("empathy", 10) < 4,
+        "check":       lambda a: a.get("metrics", {}).get("Empathy", {}).get("score", 10) < 4 or (a.get("scores", {}).get("empathy", 10) < 4),
     },
     {
         "name":        "unresolved_call",
@@ -145,13 +145,22 @@ def evaluate_audit(audit_id: int, audit_json: dict, agent_id: str = "unknown") -
         if _is_duplicate(audit_id, rule["name"]):
             continue
 
+        # Extract violations for a richer description
+        violations = audit_json.get("violations") or audit_json.get("compliance_issues") or []
+        violation_summary = ""
+        if violations:
+            violation_summary = " | Issues: " + "; ".join([v.get("message") if isinstance(v, dict) else v for v in violations[:3]])
+        
+        display_description = rule["description"] + violation_summary
+
         payload = {
             "audit_id":    audit_id,
             "agent_id":    agent_id,
             "rule":        rule["name"],
             "severity":    rule["severity"],
-            "description": rule["description"],
-            "scores":      audit_json.get("scores", {}),
+            "description": display_description,
+            "metrics":     audit_json.get("metrics", {}),
+            "violations":  violations,
             "summary":     audit_json.get("summary", ""),
         }
 
@@ -160,7 +169,7 @@ def evaluate_audit(audit_id: int, audit_json: dict, agent_id: str = "unknown") -
             agent_id    = agent_id,
             severity    = rule["severity"],
             rule_name   = rule["name"],
-            description = rule["description"],
+            description = display_description,
             payload     = mask_payload(payload),
         )
         created.append({

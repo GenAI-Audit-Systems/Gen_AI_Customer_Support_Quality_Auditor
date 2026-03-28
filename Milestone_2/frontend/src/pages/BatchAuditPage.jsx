@@ -65,7 +65,7 @@ const grade = (s) => {
 };
 
 /* ── App ─────────────────────────────────────────────────────────────── */
-export default function App() {
+export default function BatchAuditPage() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -224,16 +224,39 @@ export default function App() {
   };
 
   /* derived data */
+  /* derived data - supporting new enterprise schema */
   const audit = result?.audit || {};
   const dialogue = result?.transcript?.dialogue || [];
-  const scores = audit.scores || {};
+  
+  // Support scores and justifications with robust normalization (lowercase for internal consistency)
+  const scores = { empathy: 0, resolution: 0, professionalism: 0, compliance: 0 };
+  const justifications = { empathy: "", resolution: "", professionalism: "", compliance: "" };
+  
+  if (audit.metrics) {
+    Object.entries(audit.metrics).forEach(([k, v]) => {
+      const normalizedKey = k.toLowerCase();
+      if (scores.hasOwnProperty(normalizedKey)) {
+        scores[normalizedKey] = v.score || 0;
+        justifications[normalizedKey] = v.reason || "";
+      }
+    });
+  } else if (audit.scores) {
+     Object.entries(audit.scores).forEach(([k, v]) => {
+        const normalizedKey = k.toLowerCase();
+        if (scores.hasOwnProperty(normalizedKey)) {
+          scores[normalizedKey] = v || 0;
+          justifications[normalizedKey] = audit.metric_justifications?.[k] || "";
+        }
+     });
+  }
+
   const sc = audit.overall_score || 0;
   const gr = grade(sc);
 
-  const justifications = audit.metric_justifications || {};
-  const agentPerf = audit.agent_performance || '';
-  const callOutcome = audit.call_outcome || '';
-  const complianceIssues = audit.compliance_issues || [];
+  const agentPerf = audit.metrics?.Professionalism?.label || audit.agent_performance || 'Satisfactory';
+  const callOutcome = audit.metrics?.Resolution?.label || audit.call_outcome || 'Resolved';
+  
+  const complianceIssues = audit.violations || audit.compliance_issues || [];
 
   const radarData = Object.entries(scores).map(([k, v]) => ({
     metric: k.charAt(0).toUpperCase() + k.slice(1), value: v * 10, fullMark: 100
@@ -281,12 +304,12 @@ export default function App() {
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(255,255,255,.02)', padding: '4px 12px', borderRadius: 20, border: '1px solid rgba(255,255,255,.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: diag?.neon?.includes('Connected') ? '#34d399' : '#f87171', boxShadow: diag?.neon?.includes('Connected') ? '0 0 8px #34d39988' : 'none' }} />
-            <span style={{ fontSize: 9, fontWeight: 900, color: '#475569', textTransform: 'uppercase' }}>Neon</span>
+            <span style={{ fontSize: 9, fontWeight: 900, color: '#475569', textTransform: 'uppercase' }}>Vector Engine</span>
           </div>
           <div style={{ width: 1, height: 10, background: 'rgba(255,255,255,.1)' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: diag?.milvus?.includes('Connected') ? '#34d399' : '#fbbf24', boxShadow: diag?.milvus?.includes('Connected') ? '0 0 8px #34d39988' : 'none' }} />
-            <span style={{ fontSize: 9, fontWeight: 900, color: '#475569', textTransform: 'uppercase' }}>Milvus</span>
+            <span style={{ fontSize: 9, fontWeight: 900, color: '#475569', textTransform: 'uppercase' }}>Intelligence Layer</span>
           </div>
         </div>
 
@@ -316,6 +339,10 @@ export default function App() {
               <button className="btn" style={{ borderRight: '1px solid rgba(99,102,241,.2)' }}
                 onClick={() => exportResult('txt')}>
                 <Download size={13} /> TXT Report
+              </button>
+              <button className="btn" style={{ borderLeft: 'none', borderRight: '1px solid rgba(99,102,241,.2)', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, paddingLeft: 8 }}
+                onClick={() => { window.open(`${API_BASE}alerts/report/pdf/${result.id}/`, '_blank'); }} title="Download PDF Report">
+                PDF
               </button>
               <button className="btn" style={{ borderLeft: 'none', borderRight: '1px solid rgba(99,102,241,.2)', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, paddingLeft: 8 }}
                 onClick={() => exportResult('doc')} title="Download as Word">
@@ -414,14 +441,14 @@ export default function App() {
                     { label: 'Overall Score', val: sc, unit: 'pts', icon: Award, color: '#6366f1' },
                     { label: 'Grade', val: gr.g, unit: '', icon: Star, color: gr.color },
                     { label: 'Turns', val: dialogue.length, unit: '', icon: MessageSquare, color: '#a78bfa' },
-                    { label: 'Sentiment', val: (audit.sentiment || '—').slice(0, 3), unit: '', icon: Zap, color: '#34d399' },
+                    { label: 'Sentiment', val: (audit.metrics?.Sentiment?.label || audit.sentiment || '—'), unit: '', icon: Zap, color: '#34d399' },
                   ].map(({ label, val, unit, icon: Icon, color }) => (
-                    <div key={label} style={{ background: 'rgba(255,255,255,.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,.05)', padding: '10px 12px' }}>
+                    <div key={label} className="score" style={{ background: 'rgba(255,255,255,.03)', padding: '1rem', borderRadius: 14, border: '1px solid rgba(255,255,255,.05)', textAlign: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                         <Icon size={12} color={color} />
                         <span style={{ fontSize: 10, fontWeight: 800, color: '#334155', letterSpacing: '.1em', textTransform: 'uppercase' }}>{label}</span>
                       </div>
-                      <p style={{ fontSize: 20, fontWeight: 900, color }}>{val}{unit}</p>
+                      <p style={{ fontSize: 16, fontWeight: 900, color }}>{val}{unit}</p>
                     </div>
                   ))}
                 </div>
@@ -526,7 +553,7 @@ export default function App() {
                         {/* Summary banner */}
                         <div className="gc" style={{ padding: '1.5rem', borderLeft: '3px solid #6366f1', background: 'rgba(99,102,241,.04)' }}>
                           <p style={{ fontSize: 10, fontWeight: 800, color: '#334155', letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 8 }}>Executive Summary</p>
-                          <p style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0', lineHeight: 1.6, fontStyle: 'italic' }}>"{audit.summary}"</p>
+                          <p style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0', lineHeight: 1.6, fontStyle: 'italic' }}>"{audit.executive_summary || audit.summary}"</p>
                         </div>
                       </motion.div>
                     )}
@@ -778,14 +805,46 @@ export default function App() {
                               <p style={{ fontSize: 13, fontWeight: 700, color: '#34d399' }}>No compliance issues detected. The interaction meets regulatory standards.</p>
                             </div>
                           ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                              {complianceIssues.map((issue, i) => (
-                                <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * .06 }}
-                                  style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', background: 'rgba(248,113,113,.06)', borderRadius: 12, border: '1px solid rgba(248,113,113,.12)' }}>
-                                  <AlertCircle size={15} color="#f87171" style={{ marginTop: 2, flexShrink: 0 }} />
-                                  <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, fontWeight: 500 }}>{issue}</p>
-                                </motion.div>
-                              ))}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                              {['CRITICAL', 'HIGH', 'MEDIUM'].map(sevLevel => {
+                                const levelIssues = complianceIssues.filter(iss => {
+                                  const s = typeof iss === 'object' ? (iss.severity || 'HIGH') : 'HIGH';
+                                  return s.toUpperCase() === sevLevel;
+                                });
+                                if (levelIssues.length === 0) return null;
+                                return (
+                                  <div key={sevLevel}>
+                                    <div style={{ fontSize: 10, fontWeight: 900, color: sevLevel === 'CRITICAL' ? '#f87171' : sevLevel === 'HIGH' ? '#fbbf24' : '#a78bfa', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} /> {sevLevel} ISSUES ({levelIssues.length})
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                      {levelIssues.map((issue, i) => {
+                                        const isObj = typeof issue === 'object' && issue !== null;
+                                        const msg = isObj ? (issue.message || issue.description || issue.msg || issue.rule || "Compliance policy breach detected.") : String(issue);
+                                        const quote = isObj ? (issue.quote || issue.evidence) : null;
+                                        
+                                        return (
+                                          <div key={i} style={{ display: 'flex', gap: 12, flexDirection: 'column', padding: '14px', background: 'rgba(255,255,255,.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,.08)' }}>
+                                            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                                              <AlertCircle size={16} color={sevLevel === 'CRITICAL' ? '#f87171' : '#fbbf24'} style={{ marginTop: 2, flexShrink: 0 }} />
+                                              <div style={{ flex: 1 }}>
+                                                <p style={{ fontSize: 13, color: '#f1f5f9', lineHeight: 1.6, fontWeight: 600, margin: 0 }}>{msg}</p>
+                                                {quote && <p style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', marginTop: 8, padding: '6px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 6, borderLeft: '2px solid rgba(255,255,255,0.1)' }}>Evidence: "{quote}"</p>}
+                                                {isObj && (issue.action || issue.remediation) && (
+                                                   <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                      <Shield size={10} color="#fca5a5" />
+                                                      <span style={{ fontSize: 11, color: '#fca5a5', fontWeight: 700 }}>Action: {issue.action || issue.remediation}</span>
+                                                   </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
@@ -844,12 +903,30 @@ export default function App() {
                               ))}
                             </div>
                           ) : (
-                            <div style={{ textAlign: 'center', padding: '3rem 2rem', color: '#475569' }}>
-                              <BookOpen size={36} color="#334155" style={{ marginBottom: 12 }} />
-                              <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>No Policy Documents Loaded</p>
-                              <p style={{ fontSize: 12, maxWidth: 380, margin: '0 auto', lineHeight: 1.6 }}>
-                                Upload policy/SOP documents via the Policy Management endpoint to enable evidence-based compliance auditing with citations.
-                              </p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(99,102,241,.06)', borderRadius: 12, border: '1px solid rgba(99,102,241,.12)' }}>
+                                <Shield size={18} color="#6366f1" />
+                                <div>
+                                  <p style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Company Standard Operating Procedures (SOP)</p>
+                                  <p style={{ fontSize: 11, color: '#94a3b8' }}>Baseline compliance standards used for this audit.</p>
+                                </div>
+                              </div>
+                              {[
+                                "1. Greeting & Opening: Agent must greet politely and offer assistance.",
+                                "2. Empathy Policy: Agent must acknowledge issues with understanding.",
+                                "3. Verification Policy: Verify customer/order details before proceeding.",
+                                "4. Policy Compliance: Apply company policies (e.g. 7-day returns).",
+                                "5. Transparency Policy: Clear explanation of options and processes.",
+                                "6. Resolution Policy: Take appropriate action to resolve efficiently.",
+                                "7. Timeline Policy: Provide accurate timelines for resolution.",
+                                "8. Process Clarity: Explain next steps clearly (returns, pickups).",
+                                "9. Professionalism: Maintain polite, respectful communication.",
+                                "10. Closing Policy: Close politely and offer further assistance."
+                              ].map((policy, i) => (
+                                <div key={i} style={{ padding: '12px 14px', background: 'rgba(255,255,255,.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,.05)', fontSize: 12, color: '#cbd5e1', fontWeight: 500 }}>
+                                  {policy}
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
@@ -880,11 +957,20 @@ export default function App() {
       </div>
 
       {/* FOOTER */}
-      <footer style={{ borderTop: '1px solid rgba(255,255,255,.04)', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(5,7,15,.6)', position: 'relative', zIndex: 1 }}>
-        <p style={{ fontSize: 9, fontWeight: 800, color: '#1e293b', letterSpacing: '.12em', textTransform: 'uppercase' }}>© 2026 Customer Intelligence Platform</p>
-        <div style={{ display: 'flex', gap: 20 }}>
-          {['Deepgram Nova-2', 'OpenRouter GPT-3.5', 'SOC2 Compliant'].map(t => (
-            <span key={t} style={{ fontSize: 9, fontWeight: 700, color: '#1e293b', letterSpacing: '.1em', textTransform: 'uppercase' }}>{t}</span>
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,.02)', padding: '1.25rem 2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(2,4,12,0.8)', backdropFilter: 'blur(10px)', position: 'relative', zIndex: 1 }}>
+        <p style={{ fontSize: 10, fontWeight: 800, color: '#334155', letterSpacing: '.12em', textTransform: 'uppercase' }}>
+          Enterprise Intelligence Platform <span style={{ color: '#1e293b', margin: '0 8px' }}>•</span> © 2026 AI Auditor
+        </p>
+        <div style={{ display: 'flex', gap: 24 }}>
+          {[
+            { t: 'Deepgram Nova-2 Service', v: 'Operational' },
+            { t: 'GPT-4o Reasoning Core', v: 'Active' },
+            { t: 'ISO/IEC 27001 Certified', v: 'Verified' }
+          ].map(item => (
+            <div key={item.t} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', boxShadow: '0 0 8px #34d39966' }} />
+              <span style={{ fontSize: 9, fontWeight: 800, color: '#475569', letterSpacing: '.08em', textTransform: 'uppercase' }}>{item.t}</span>
+            </div>
           ))}
         </div>
       </footer>

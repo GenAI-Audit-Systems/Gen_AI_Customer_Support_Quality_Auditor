@@ -12,9 +12,10 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 from dotenv import load_dotenv
 import io
+from rag.llm_provider import llm_complete
 
 # Load .env file
-load_dotenv()
+load_dotenv(override=True)
 
 # ==============================
 # API KEYS (From .env)
@@ -127,28 +128,12 @@ STRICT JSON STRUCTURE (all fields required):
 Only return valid JSON. No extra text.
 """
 
-    payload = {
-        "model": MODEL_NAME,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": input_text}
-        ],
-        "temperature": 0.3,
-        "response_format": { "type": "json_object" }
-    }
-
-    try:
-        response = requests.post(OPENROUTER_URL, headers=headers, data=json.dumps(payload), timeout=60)
-    except requests.exceptions.Timeout:
-        raise Exception("OpenRouter API request timed out.")
-    except requests.exceptions.ConnectionError:
-        raise Exception("Could not connect to OpenRouter API.")
-
-    if response.status_code != 200:
-        raise Exception(f"OpenRouter Error: {response.text}")
-
-    result = response.json()
-    content = result["choices"][0]["message"]["content"]
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": input_text}
+    ]
+    
+    content = llm_complete(messages)
     return json.loads(content)
 
 # ==============================
@@ -272,24 +257,19 @@ class DiagnosticView(APIView):
             dg_resp = requests.get("https://api.deepgram.com/v1/projects", 
                                   headers={"Authorization": f"Token {DEEPGRAM_API_KEY}"}, 
                                   timeout=10)
-            results["deepgram"] = "Connected" if dg_resp.status_code in [200, 401, 403] else f"Error: {dg_resp.status_code}"
-        except Exception as e:
-            results["deepgram"] = f"Timeout/Error: {str(e)}"
-
-        # Test OpenRouter
-        try:
             or_resp = requests.get("https://openrouter.ai/api/v1/models", timeout=10)
-            results["openrouter"] = "Connected" if or_resp.status_code == 200 else f"Error: {or_resp.status_code}"
-        except Exception as e:
-            results["openrouter"] = f"Timeout/Error: {str(e)}"
             
-        # Test Neon
-        db_url = os.getenv("DATABASE_URL")
-        results["neon"] = "Connected" if db_url and "neon.tech" in db_url else "Disconnected (Fallback to SQLite)"
-
-        # Test Milvus
-        from rag.milvus_client import MILVUS_AVAILABLE
-        results["milvus"] = "Connected" if MILVUS_AVAILABLE else "Disconnected (Mock Mode)"
+            # Connection Status
+            results["Transcription Service"] = "Operational" if dg_resp.status_code in [200, 401, 403] else "Issue"
+            results["Intelligence Layer"]    = "Operational" if or_resp.status_code == 200 else "Issue"
+            
+            db_url = os.getenv("DATABASE_URL")
+            results["Primary Database"] = "Connected" if db_url and "neon.tech" in db_url else "Active (SQLite)"
+            
+            from rag.milvus_client import MILVUS_AVAILABLE
+            results["Vector Engine"] = "Ready" if MILVUS_AVAILABLE else "Mocked"
+        except Exception as e:
+            results["System Status"] = f"Partial Connectivity: {str(e)}"
 
         return Response(results)
 

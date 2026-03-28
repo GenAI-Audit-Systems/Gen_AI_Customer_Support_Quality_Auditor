@@ -259,3 +259,23 @@ body::before {
   padding: 10px 14px !important;
   font-family: 'Outfit', sans-serif !important;
 }
+
+/* user requested level-up animations */
+.alert-critical {
+  animation: pulseRed 1s infinite;
+}
+
+@keyframes pulseRed {
+  0% { box-shadow: 0 0 10px red; }
+  50% { box-shadow: 0 0 30px red; }
+  100% { box-shadow: 0 0 10px red; }
+}
+
+.score {
+  transition: all 0.3s ease;
+}
+
+.score:hover {
+  transform: scale(1.2);
+  text-shadow: 0 0 10px cyan;
+}

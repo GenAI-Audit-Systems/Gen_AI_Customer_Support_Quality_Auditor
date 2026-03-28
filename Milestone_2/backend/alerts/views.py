@@ -55,18 +55,21 @@ class AlertHistoryView(APIView):
         if severity:
             qs = qs.filter(severity=severity)
         qs = qs[:limit]
-        data = [{
-            "id":          a.id,
-            "audit_id":    a.audit_id,
-            "agent_id":    a.agent_id,
-            "severity":    a.severity,
-            "rule":        a.rule_name,
-            "description": a.description,
-            "dispatched":  a.dispatched,
-            "reviewed":    a.reviewed,
-            "created_at":  a.created_at.strftime("%Y-%m-%d %H:%M"),
-        } for a in qs]
-        return Response({"alerts": data, "total": len(data)})
+        try:
+            data = [{
+                "id":          a.id,
+                "audit_id":    a.audit_id,
+                "agent_id":    a.agent_id,
+                "severity":    a.severity,
+                "rule":        a.rule_name,
+                "description": a.description,
+                "dispatched":  a.dispatched,
+                "reviewed":    a.reviewed,
+                "created_at":  a.created_at.strftime("%Y-%m-%d %H:%M") if a.created_at else "N/A",
+            } for a in qs]
+            return Response({"alerts": data, "total": len(data)})
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
 
 
 # ── 3. PDF Report Download ─────────────────────────────────────────────

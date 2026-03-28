@@ -78,19 +78,18 @@ export default function AlertsPage() {
               </tr>
             </thead>
             <tbody>
-              {alerts.map((a, i) => (
+              {(alerts || []).map((a, i) => (
                 <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", opacity: a.reviewed ? 0.6 : 1 }}>
                   <td style={{ padding: "12px 0", color: "#cbd5e1" }}>{a.created_at}</td>
                   <td>
-                    <span style={{
-                      padding: "4px 10px", borderRadius: 12, fontSize: 11, fontWeight: 600,
-                      background: a.severity === "CRITICAL" ? "rgba(239,68,68,0.2)" : a.severity === "WARNING" ? "rgba(251,191,36,0.2)" : "rgba(148,163,184,0.2)",
-                      color: a.severity === "CRITICAL" ? "#fca5a5" : a.severity === "WARNING" ? "#fcd34d" : "#cbd5e1"
-                    }}>
+                    <span className={`badge ${a.severity === 'CRITICAL' ? 'b-red alert-critical' : a.severity === 'HIGH' ? 'b-amber' : a.severity === 'MEDIUM' ? 'b-violet' : 'b-green'}`}>
                       {a.severity}
                     </span>
                   </td>
-                  <td style={{ color: "#e2e8f0" }}>{a.rule}</td>
+                  <td style={{ color: "#e2e8f0", maxWidth: 400 }}>
+                    <div style={{ fontWeight: 700, marginBottom: 4 }}>{a.rule.replace(/_/g, ' ')}</div>
+                    <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.4 }}>{a.description}</div>
+                  </td>
                   <td style={{ color: "#94a3b8" }}>{a.agent_id}</td>
                   <td>
                     <button 

@@ -39,12 +39,13 @@ export default function SupervisorDashboard() {
   }
 
   // Pick top agent for radar
-  const topAgent = agents[0] || { avg_empathy: 0, avg_compliance: 0, avg_score: 0 };
+  const safeAgents = agents || [];
+  const topAgent = safeAgents[0] || { avg_empathy: 0, avg_compliance: 0, avg_score: 0 };
   const radarData = [
-    { metric: "Empathy", val: topAgent.avg_empathy * 10 },
-    { metric: "Compliance", val: topAgent.avg_compliance * 10 },
-    { metric: "Overall", val: topAgent.avg_score },
-    { metric: "Resolution", val: topAgent.avg_score * 0.95 }, // simulation if missing
+    { metric: "Empathy", val: (topAgent.avg_empathy || 0) * 10 },
+    { metric: "Compliance", val: (topAgent.avg_compliance || 0) * 10 },
+    { metric: "Overall", val: (topAgent.avg_score || 0) },
+    { metric: "Resolution", val: (topAgent.avg_score || 0) * 0.95 }, // simulation if missing
   ];
 
   return (
@@ -61,8 +62,8 @@ export default function SupervisorDashboard() {
       {/* Alerts Ticker */}
       <GlassPanel title={<><AlertTriangle size={16} style={{marginRight:8, verticalAlign:"middle"}} /> Recent Compliance Alerts</>} delayed={0.1} style={{ marginBottom: 24, padding: "16px 24px" }}>
         <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 8 }}>
-          {alerts.length === 0 ? <span style={{color: "#64748b"}}>No recent alerts.</span> : 
-           alerts.map(a => (
+          {(alerts || []).length === 0 ? <span style={{color: "#64748b"}}>No recent alerts.</span> : 
+           (alerts || []).map(a => (
             <div key={a.id} style={{ 
               background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)",
               padding: "8px 16px", borderRadius: 8, flexShrink: 0, color: "#f87171", fontSize: 13
@@ -88,7 +89,7 @@ export default function SupervisorDashboard() {
               </tr>
             </thead>
             <tbody>
-              {agents.slice(0, 10).map((ag, i) => (
+              {(agents || []).slice(0, 10).map((ag, i) => (
                 <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                   <td style={{ padding: "12px 0", color: "#e2e8f0" }}>{ag.agent_id.substring(0, 15)}...</td>
                   <td style={{ color: "#94a3b8" }}>{ag.total_audits}</td>

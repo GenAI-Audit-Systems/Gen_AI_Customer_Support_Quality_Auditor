@@ -47,9 +47,9 @@ def generate_excel_report(records) -> bytes:
     # ── Sheet 1: Audit Summary ────────────────────────────────────────
     ws1 = wb.active
     ws1.title = "Audit Summary"
-    headers1 = ["ID", "File", "Date", "Source", "Score", "Grade",
-                 "Sentiment", "Agent Performance", "Call Outcome",
-                 "Empathy", "Resolution", "Professionalism", "Compliance"]
+    headers1 = ["ID", "File", "Date", "Overall Score", "Grade",
+                 "Sentiment", "Resolution", "Professionalism", "Empathy", "Compliance",
+                 "Violations Count", "Executive Summary"]
     ws1.append(headers1)
     _header_style(ws1, 1, len(headers1))
 
@@ -65,80 +65,62 @@ def generate_excel_report(records) -> bytes:
     for r in all_records:
         a = r.audit_json or {}
         sc = r.overall_score or 0
-        scores = a.get("scores", {})
+        metrics = a.get("metrics", {})
+        violations = a.get("violations", [])
         date = r.created_at.strftime("%Y-%m-%d %H:%M") if hasattr(r.created_at, "strftime") else str(r.created_at)
+        
+        # Normalize metrics keys (case-insensitive)
+        m_norm = {k.lower(): v for k, v in metrics.items()}
         row = [
-            r.id, r.filename, date, r.source_type, sc, grade(sc),
-            r.sentiment,
-            a.get("agent_performance", "N/A"),
-            a.get("call_outcome", "N/A"),
-            scores.get("empathy", 0),
-            scores.get("resolution", 0),
-            scores.get("professionalism", 0),
-            scores.get("compliance", 0),
+            r.id, r.filename, date, sc, grade(sc),
+            m_norm.get("sentiment", {}).get("label", r.sentiment or "N/A"),
+            m_norm.get("resolution", {}).get("label", "N/A"),
+            m_norm.get("professionalism", {}).get("label", "N/A"),
+            m_norm.get("empathy", {}).get("label", "N/A"),
+            m_norm.get("compliance", {}).get("label", "N/A"),
+            len(violations),
+            a.get("executive_summary", a.get("summary", ""))
         ]
         ws1.append(row)
-        # Conditional colour on Score column (E)
-        score_cell = ws1.cell(row=ws1.max_row, column=5)
+        score_cell = ws1.cell(row=ws1.max_row, column=4)
         score_cell.fill = _score_fill(sc)
 
     for col in ws1.columns:
-        ws1.column_dimensions[get_column_letter(col[0].column)].width = 16
+        ws1.column_dimensions[get_column_letter(col[0].column)].width = 20
 
-    # ── Sheet 2: Score Trends ─────────────────────────────────────────
-    ws2 = wb.create_sheet("Score Trends")
-    headers2 = ["Date", "File", "Overall", "Empathy", "Resolution", "Professionalism", "Compliance"]
+    # ── Sheet 2: Violations Log ───────────────────────────────────────
+    ws2 = wb.create_sheet("Violations Log")
+    headers2 = ["Audit ID", "File", "Severity", "Category", "Description", "Evidence", "Remediation"]
     ws2.append(headers2)
     _header_style(ws2, 1, len(headers2))
-    for r in sorted(all_records, key=lambda x: x.created_at):
+    for r in all_records:
         a = r.audit_json or {}
-        sc = a.get("scores", {})
-        date = r.created_at.strftime("%Y-%m-%d") if hasattr(r.created_at, "strftime") else str(r.created_at)
-        ws2.append([
-            date, r.filename, r.overall_score,
-            sc.get("empathy", 0), sc.get("resolution", 0),
-            sc.get("professionalism", 0), sc.get("compliance", 0),
-        ])
+        for v in a.get("violations", []):
+            ws2.append([
+                r.id, r.filename, 
+                v.get("severity", "N/A"),
+                v.get("category", "Policy Violation"),
+                v.get("message", "Compliance Breach"), # Fixed undefined variable
+                v.get("quote", "N/A"),
+                v.get("action", "N/A")
+            ])
     for col in ws2.columns:
-        ws2.column_dimensions[get_column_letter(col[0].column)].width = 18
+        ws2.column_dimensions[get_column_letter(col[0].column)].width = 25
 
-    # ── Sheet 3: Compliance Log ───────────────────────────────────────
-    ws3 = wb.create_sheet("Compliance Log")
-    headers3 = ["Audit ID", "File", "Date", "Compliance Score", "Issues"]
+    # ── Sheet 3: Agent Leaderboard ────────────────────────────────────
+    ws3 = wb.create_sheet("Agent Leaderboard")
+    headers3 = ["Rank", "Agent (File)", "Audits", "Avg Score", "Risk Level"]
     ws3.append(headers3)
     _header_style(ws3, 1, len(headers3))
-    for r in all_records:
-        a      = r.audit_json or {}
-        issues = a.get("compliance_issues", [])
-        c_score = (a.get("scores") or {}).get("compliance", 0)
-        date = r.created_at.strftime("%Y-%m-%d %H:%M") if hasattr(r.created_at, "strftime") else str(r.created_at)
-        ws3.append([
-            r.id, r.filename, date, c_score,
-            "; ".join(issues) if issues else "None",
-        ])
-        if issues:
-            ws3.cell(row=ws3.max_row, column=4).fill = _score_fill(c_score * 10)
-    for col in ws3.columns:
-        ws3.column_dimensions[get_column_letter(col[0].column)].width = 22
-
-    # ── Sheet 4: Agent Leaderboard ────────────────────────────────────
-    ws4 = wb.create_sheet("Agent Leaderboard")
-    headers4 = ["Rank", "Agent (File)", "Audits", "Avg Score", "Avg Empathy",
-                 "Avg Compliance", "Grade", "Risk Level"]
-    ws4.append(headers4)
-    _header_style(ws4, 1, len(headers4))
 
     agents = {}
     for r in all_records:
         key = (r.filename or "Unknown")[:40]
-        a   = r.audit_json or {}
-        sc  = a.get("scores", {})
         if key not in agents:
-            agents[key] = {"total": 0, "score_sum": 0, "emp_sum": 0, "comp_sum": 0}
+            agents[key] = {"total": 0, "score_sum": 0, "violations": 0}
         agents[key]["total"]    += 1
         agents[key]["score_sum"] += r.overall_score or 0
-        agents[key]["emp_sum"]   += sc.get("empathy", 0)
-        agents[key]["comp_sum"]  += sc.get("compliance", 0)
+        agents[key]["violations"] += len((r.audit_json or {}).get("violations", []))
 
     ranked = sorted(
         [(k, v) for k, v in agents.items()],
@@ -148,12 +130,11 @@ def generate_excel_report(records) -> bytes:
     for rank, (name, v) in enumerate(ranked, 1):
         n    = v["total"]
         avg  = round(v["score_sum"] / n, 1)
-        comp = round(v["comp_sum"] / n, 1)
-        risk = "HIGH" if comp < 5 else "MEDIUM" if avg < 65 else "LOW"
-        ws4.append([rank, name, n, avg, round(v["emp_sum"]/n, 1), comp, grade(avg), risk])
-        ws4.cell(row=ws4.max_row, column=4).fill = _score_fill(avg)
-    for col in ws4.columns:
-        ws4.column_dimensions[get_column_letter(col[0].column)].width = 18
+        risk = "HIGH" if v["violations"]/n > 1 else "MEDIUM" if avg < 65 else "LOW"
+        ws3.append([rank, name, n, avg, risk])
+        ws3.cell(row=ws3.max_row, column=4).fill = _score_fill(avg)
+    for col in ws3.columns:
+        ws3.column_dimensions[get_column_letter(col[0].column)].width = 22
 
     buf = io.BytesIO()
     wb.save(buf)

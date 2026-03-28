@@ -78,19 +78,72 @@ class AuditStreamConsumer(AsyncJsonWebsocketConsumer):
 
         await self.send_json({"event": "policy_context", "data": policy_chunks})
 
+        # 10-point Enterprise Policy Context for real-time awareness
+        ENTERPRISE_SOP = """
+        1. Greeting: Must be polite and offer immediate assistance.
+        2. Empathy: Must acknowledge customer frustration with concern.
+        3. Verification: Must verify identity before account changes.
+        4. Returns: 7-day window for all items; exchange/credit only after.
+        5. Ethics: No bribes, no personal info requests.
+        6. De-escalation: Must offer manager callback for 3+ complaints.
+        7. Transparency: Must explain all fees and timelines clearly.
+        8. Resolution: Must take ownership of the issue until solved.
+        9. Closure: Must ask 'Is there anything else I can help with?'
+        10. Privacy/PII: Mask all PII; do not repeat passwords or card #s.
+        """
+
         messages = [
             {"role": "system", "content": (
-                "You are an AI quality auditor. Analyze this conversation turn "
-                "and give a brief analysis: tone, compliance, empathy signal. "
-                "Be concise (2-3 sentences max)."
+                "You are an ENTERPRISE REAL-TIME QA AUDITOR. "
+                "Analyze the current utterance against the Company SOP below.\n\n"
+                f"COMPANY SOP:\n{ENTERPRISE_SOP}\n\n"
+                "STRICT JSON OUTPUT FORMAT:\n"
+                "{\n"
+                '  "event": "UTTERANCE_SCORED",\n'
+                '  "speaker": "AGENT|CUSTOMER",\n'
+                '  "scores": { "empathy": 1-10, "professionalism": 1-10, "compliance": 1-10 },\n'
+                '  "flags": ["Specific policy name breached or NO_VIOLATIONS"],\n'
+                '  "violation_detected": true|false,\n'
+                '  "severity": "LOW|MEDIUM|HIGH|CRITICAL",\n'
+                '  "justification": "Brief 1-sentence explanation of the score/flag."\n'
+                "}\n"
             )},
-            {"role": "user", "content": aug_prompt},
+            {"role": "user", "content": f"Audit this turn (Context enabled):\n{aug_prompt}"},
         ]
-        buffer = ""
-        # Send SSE-style streaming tokens
-        for token in llm_stream(messages):
-            buffer += token
-            await self.send_json({"event": "token", "data": token})
+        
+        from rag.llm_provider import llm_complete
+        import json
+        
+        result_str = await sync_to_async(llm_complete)(messages, temperature=0.2)
+        
+        try:
+            result = json.loads(result_str)
+        except Exception:
+            # Fallback
+            result = {
+                "event": "UTTERANCE_SCORED",
+                "speaker": "UNKNOWN",
+                "text": turn_text[:100],
+                "scores": {"empathy": 5, "professionalism": 5, "compliance": 5},
+                "flags": [],
+                "violation_detected": False,
+                "severity": "LOW"
+            }
+            
+        # Send UTTERANCE_SCORED
+        await self.send_json({
+            "type": "UTTERANCE_SCORED",
+            "data": result
+        })
+        
+        # Send VIOLATION_DETECTED if applicable
+        if result.get("violation_detected"):
+            await self.send_json({
+                "type": "VIOLATION_DETECTED",
+                "data": result
+            })
+            
+        buffer = json.dumps(result)
 
         # 4. Compliance flag
         if risk.get("risk_level") in ("CRITICAL", "WARNING"):

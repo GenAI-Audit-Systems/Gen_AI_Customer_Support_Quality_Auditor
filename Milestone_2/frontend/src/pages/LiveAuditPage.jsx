@@ -1,8 +1,26 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Zap, AlertTriangle } from "lucide-react";
 import { GlassPanel } from "../components/ui/GlassPanel";
-import { Zap, Sparkles, AlertTriangle } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/";
+
+const TypewriterText = ({ text }) => {
+  const [displayText, setDisplayText] = useState("");
+
+  useEffect(() => {
+    let i = 0;
+    setDisplayText("");
+    if (!text) return;
+    const interval = setInterval(() => {
+      setDisplayText(prev => prev + text.charAt(i));
+      i++;
+      if (i >= text.length) clearInterval(interval);
+    }, 15);
+    return () => clearInterval(interval);
+  }, [text]);
+
+  return <span>{displayText}</span>;
+};
 
 export default function LiveAuditPage() {
   const [sessionId] = useState(`sess_${Math.floor(Math.random() * 10000)}`);
@@ -69,6 +87,28 @@ export default function LiveAuditPage() {
   const handleServerEvent = (data) => {
     if (data.event === "token") {
       setStreamingToken(prev => prev + data.data);
+    } else if (data.type === "UTTERANCE_SCORED") {
+      const payload = data.data;
+      setMessages(prev => {
+        const newMsgs = [...prev];
+        const last = newMsgs[newMsgs.length - 1];
+        if (last && last.role === "agent") {
+            const s = payload.scores || {};
+            const msg = payload.justification ? `\n\nJustification: ${payload.justification}` : "";
+            last.ai_analysis = `Empathy: ${s.empathy}/10 | Professionalism: ${s.professionalism}/10 | Compliance: ${s.compliance}/10 | Flags: ${payload.flags?.join(", ") || "None"} | [${payload.severity}]${msg}`;
+        }
+        return newMsgs;
+      });
+      if (payload.scores) {
+         setRisk({ risk_score: payload.scores.compliance * 10, risk_level: payload.severity, flags: payload.flags });
+      }
+    } else if (data.type === "VIOLATION_DETECTED") {
+      setMessages(prev => {
+        const newMsgs = [...prev];
+        const last = newMsgs[newMsgs.length - 1];
+        if (last) last.flag = { flags: data.data.flags, severity: data.data.severity };
+        return newMsgs;
+      });
     } else if (data.event === "turn_complete" || data.event === "session_complete") {
       setMessages(prev => {
         const newMsgs = [...prev];
@@ -88,6 +128,15 @@ export default function LiveAuditPage() {
         if (last) last.flag = data;
         return newMsgs;
       });
+    }
+  };
+
+  const sendTurnWs = (turnText) => {
+    setMessages(prev => [...prev, { role: "agent", text: turnText }]);
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ turn_text: turnText, audit_id: 0, tenant_id: "default" }));
+    } else {
+      setMessages(prev => [...prev, { role: "system", text: "Error: WebSocket is disconnected." }]);
     }
   };
 
@@ -154,9 +203,11 @@ export default function LiveAuditPage() {
     const text = input;
     setInput("");
 
-    // ALWAYS use the rock-solid SSE endpoint for AI turn evaluation
-    // (Django Channels AsyncWebsocketConsumer freezes during sync LLM generators)
-    sendTurnSSE(text);
+    if (mode === "ws") {
+      sendTurnWs(text);
+    } else {
+      sendTurnSSE(text);
+    }
   };
 
   // Auto-connect on mount
@@ -196,7 +247,7 @@ export default function LiveAuditPage() {
           {messages.map((m, i) => (
             <div key={i} style={{ alignSelf: m.role === "customer" ? "flex-start" : "flex-end", maxWidth: "80%" }}>
               <div style={{ background: m.role === "customer" ? "rgba(255,255,255,0.05)" : "linear-gradient(135deg, #6366f1, #8b5cf6)", padding: "12px 16px", borderRadius: 16, color: "#fff", borderBottomRightRadius: m.role === "agent" ? 0 : 16, borderBottomLeftRadius: m.role === "customer" ? 0 : 16 }}>
-                {m.text}
+                <TypewriterText text={m.text} />
               </div>
               
               {/* Turn level AI analysis */}
@@ -218,15 +269,21 @@ export default function LiveAuditPage() {
         </div>
 
         {/* Input area */}
-        <form onSubmit={sendTurn} style={{ display: "flex", padding: 16, borderTop: "1px solid rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.2)" }}>
+        <div style={{ padding: '12px 24px', background: 'rgba(99,102,241,.05)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <p style={{ fontSize: 10, fontWeight: 900, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 4 }}>Simulation Console</p>
+          <p style={{ fontSize: 11, color: '#64748b' }}>
+            Type below to simulate an <b>Agent</b>. Use <b>"C: "</b> or <b>"Customer: "</b> prefix to simulate a customer turn.
+          </p>
+        </div>
+        <form onSubmit={sendTurn} style={{ display: "flex", padding: "16px 24px 24px", background: "rgba(0,0,0,0.2)" }}>
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type agent response..."
-            style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "12px 16px", borderRadius: 8, outline: "none" }}
+            placeholder="e.g., Hello, how can I help? or C: I want a refund"
+            style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "12px 16px", borderRadius: 10, outline: "none", fontSize: 14 }}
           />
-          <button type="submit" disabled={!input.trim()} style={{ background: "#6366f1", border: "none", color: "#fff", padding: "0 24px", borderRadius: 8, marginLeft: 12, fontWeight: 600, cursor: !input.trim() ? "not-allowed" : "pointer" }}>
+          <button type="submit" disabled={!input.trim()} style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)", border: "none", color: "#fff", padding: "0 24px", borderRadius: 10, marginLeft: 12, fontWeight: 700, cursor: !input.trim() ? "not-allowed" : "pointer", boxShadow: '0 4px 12px rgba(99,102,241,.2)' }}>
             Send Turn
           </button>
         </form>

@@ -24,9 +24,9 @@ export default function MainLayout() {
 
       {/* Sidebar */}
       <motion.nav
-        animate={{ width: collapsed ? 64 : 230 }}
+        animate={{ width: collapsed ? 64 : 240 }}
         transition={{ duration: 0.3 }}
-        style={styles.sidebar}
+        style={{...styles.sidebar, width: collapsed ? 64 : 240}}
       >
         <div style={styles.logoRow}>
           {!collapsed && (
@@ -37,7 +37,7 @@ export default function MainLayout() {
               </div>
               <div>
                 <div style={styles.logo}>AI Auditor</div>
-                <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase" }}>Enterprise</div>
+                <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase" }}>Enterprise v2.0</div>
               </div>
             </motion.div>
           )}
@@ -46,7 +46,7 @@ export default function MainLayout() {
           </button>
         </div>
 
-        <div style={{ flex: 1, paddingTop: 8 }}>
+        <div style={{ flex: 1, paddingTop: 12 }}>
           {NAV.map((item) => (
             <NavLink
               key={item.path}
@@ -55,10 +55,11 @@ export default function MainLayout() {
               style={({ isActive }) => ({
                 ...styles.navItem,
                 background: isActive
-                  ? "linear-gradient(135deg, rgba(99,102,241,0.35), rgba(139,92,246,0.25))"
+                  ? "linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.2))"
                   : "transparent",
                 borderLeft: isActive ? "3px solid #6366f1" : "3px solid transparent",
-                color: isActive ? "#e2e8f0" : "#94a3b8",
+                color: isActive ? "#fff" : "#94a3b8",
+                boxShadow: isActive ? "0 4px 12px rgba(99,102,241,0.1)" : "none",
               })}
             >
               <item.Icon size={18} style={{ flexShrink: 0 }} />
@@ -71,18 +72,26 @@ export default function MainLayout() {
           ))}
         </div>
 
-        {/* License Footer */}
-        {!collapsed && (
-          <div style={styles.sidebarFooter}>
-            <button onClick={() => setShowLicense(true)} style={styles.licenseBtn}>
-              <Shield size={12} /> License
-            </button>
-          </div>
-        )}
+        {/* Sidebar Footer */}
+        <div style={styles.sidebarFooter}>
+           {!collapsed ? (
+             <>
+               <button onClick={() => setShowLicense(true)} style={styles.licenseBtn}>
+                 <Shield size={12} /> View License & Legal
+               </button>
+               <div style={{ marginTop: 12, textAlign: 'center' }}>
+                 <p style={{ fontSize: 10, color: '#334155', fontWeight: 800 }}>© 2026 INTELLIGENCE PLATFORM</p>
+                 <p style={{ fontSize: 8, color: '#1e293b', marginTop: 2 }}>ISO 27001 • GDPR • SOC2 COMPLIANT</p>
+               </div>
+             </>
+           ) : (
+             <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.05)' }} />
+           )}
+        </div>
       </motion.nav>
 
       {/* Main content */}
-      <main style={styles.main}>
+      <main style={{...styles.main, marginLeft: collapsed ? 64 : 240}}>
         <Outlet />
       </main>
 
@@ -155,9 +164,10 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     padding: "20px 0",
-    position: "sticky",
+    position: "fixed",
     top: 0,
-    height: "100vh",
+    left: 0,
+    bottom: 0,
     zIndex: 10,
     flexShrink: 0,
   },
@@ -226,6 +236,7 @@ const styles = {
     overflow: "auto",
     zIndex: 1,
     position: "relative",
+    marginLeft: 240, // Default width, gets overridden inline if collapsed
   },
   modalOverlay: {
     position: "fixed",

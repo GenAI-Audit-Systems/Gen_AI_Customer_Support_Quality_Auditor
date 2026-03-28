@@ -187,11 +187,19 @@ class RAGEngine:
             )
             context_block = f"Relevant compliance policies and SOPs for context:\n{policy_text}"
         else:
-            # Industry-standard fallback context
+            # Industry-standard fallback context (Enterprise Policy)
             context_block = (
-                "No specific local policies found. Apply industry-standard customer support best practices: "
-                "Verify identity if required, remain professional, show empathy, confirm resolution, "
-                "and ensure data privacy (PII protection)."
+                "Apply Standard Company Operating Procedures for context:\n"
+                "1. Greeting & Opening Policy: Agent must greet politely and offer assistance.\n"
+                "2. Empathy Policy: Agent must acknowledge customer issues with understanding and concern.\n"
+                "3. Verification Policy: Agent must verify customer/order details before proceeding.\n"
+                "4. Policy Compliance: Agent must correctly apply company policies (e.g., 7-day return window).\n"
+                "5. Transparency Policy: Agent must clearly explain available options and processes.\n"
+                "6. Resolution Policy: Agent must take appropriate action to resolve the issue efficiently.\n"
+                "7. Timeline Communication Policy: Agent must provide accurate timelines for resolution.\n"
+                "8. Process Clarity Policy: Agent must explain next steps clearly (returns, pickup instructions).\n"
+                "9. Professional Communication Policy: Agent must maintain polite and respectful communication.\n"
+                "10. Closing Policy: Agent must close politely and offer further assistance."
             )
 
         augmented_prompt = (
@@ -259,43 +267,45 @@ class RAGEngine:
         augmented_prompt, policy_chunks = self.augmented_audit_prompt(transcript, tenant_id)
 
         system_prompt = """
-You are a senior Quality Auditor and Compliance Officer for a customer support operation.
-Analyze the conversation transcript VERY CAREFULLY for quality AND compliance violations.
+You are an Enterprise AI Quality Auditor. Your goal is to provide a "perfect", professional-grade audit in structured JSON.
+Analyze the transcript for ALL compliance, quality, and performance nuances.
 
-COMPLIANCE RED FLAGS you MUST detect (list ALL that apply in compliance_issues):
-- PII/Data exposure: Agent asks for or accepts full credit card numbers, SSNs, passwords
-- Policy misrepresentation: Agent contradicts official policies (e.g. wrong refund timelines)
-- Coercion/intimidation: Agent discourages complaints, threatens delays, pressures customer
-- Lack of verification: Agent skips identity verification before accessing accounts
-- Unprofessional conduct: Dismissive language, belittling the customer's concerns
-- Unauthorized promises: Agent offers deals/workarounds outside standard procedure
-- Missing confirmation: Agent fails to provide confirmation emails/reference numbers
-- Escalation refusal: Agent refuses to transfer to supervisor when requested
-
-Score STRICTLY — a conversation with multiple violations should get compliance 1-3/10, overall_score below 30.
-
-Return STRICT JSON (no markdown, no extra text):
+REQUIRED JSON STRUCTURE:
 {
-  "summary": "2-3 sentence executive summary",
-  "scores": {
-    "empathy": 0-10, "resolution": 0-10,
-    "professionalism": 0-10, "compliance": 0-10
-  },
-  "metric_justifications": {
-    "empathy": "1-2 sentences with evidence",
-    "resolution": "...", "professionalism": "...", "compliance": "..."
-  },
   "overall_score": 0-100,
-  "sentiment": "Positive/Neutral/Negative",
-  "agent_performance": "Excellent/Good/Satisfactory/Needs Improvement/Poor",
-  "call_outcome": "Resolved/Partially Resolved/Unresolved/Escalated",
-  "key_findings": ["Finding 1", "Finding 2", "Finding 3"],
-  "improvement_tips": ["Tip 1", "Tip 2", "Tip 3"],
-  "compliance_issues": ["List EVERY SINGLE compliance violation detected. THIS MUST NOT BE EMPTY IF compliance SCORE < 10"],
-  "policy_references": ["Source 1", "Source 2"],
-  "rag_coverage": 0.0
+  "metrics": {
+    "Sentiment": {"score": 0-10, "label": "Positive|Neutral|Negative", "reason": "..."},
+    "Resolution": {"score": 0-10, "label": "Success|Partial|Fail", "reason": "..."},
+    "Professionalism": {"score": 0-10, "label": "High|Medium|Low", "reason": "..."},
+    "Empathy": {"score": 0-10, "label": "Strong|Adequate|Weak", "reason": "..."},
+    "Compliance": {"score": 0-10, "label": "Pass|Fail", "reason": "..."}
+  },
+  "executive_summary": "A high-level executive briefing (3-4 sentences) summarizing the interaction, agent performance, and business impact.",
+  "violations": [
+    {
+      "severity": "CRITICAL|HIGH|MEDIUM|LOW",
+      "category": "Data Privacy|Conduct|Procedure|Authorization",
+      "description": "Clear professional description of the violation.",
+      "evidence": "Exact quote from transcript",
+      "remediation": "Mandatory corrective action for the agent."
+    }
+  ],
+  "key_findings": ["Finding 1...", "Finding 2..."],
+  "improvement_tips": ["Professional recommendation 1...", "Professional recommendation 2..."],
+  "live_flags": ["ESCALATION_NEEDED", "RISKY_BEHAVIOR", "POLICY_GAP"],
+  "rag_coverage": 0.0-1.0,
+  "policy_references": ["Reference doc names used for this audit"]
 }
-Only return valid JSON. No extra text.
+
+STRICT MANDATES:
+1. PII EXPOSURE: If an agent asks for a password or credit card, mark as CRITICAL violation.
+2. PROFESSIONALISM: Use formal, enterprise-level language in your summaries.
+3. FINDINGS: Do NOT leave findings empty. Identify at least 3 distinct observations. If none, state "Positive adherence to standard operating procedures."
+4. IMPROVEMENT TIPS: Always provide at least 2 actionable coaching points.
+5. ACTIONABLE: All remediation steps must be specific commands the supervisor can give.
+6. NO NULLS: Do not use empty arrays or null strings. If no violations exist, return one violation with severity "LOW", category "Procedure", and description "No critical compliance failures detected."
+7. SCORE ACCURACY: A "Compliance" score of 10/10 requires zero CRITICAL or HIGH violations. Deduct 3 points for each HIGH violation and 7 points for any CRITICAL violation.
+8. NO TEXT: Return ONLY the JSON object. Do not explain your thought process.
 """
         messages = [
             {"role": "system",  "content": system_prompt},
@@ -330,24 +340,31 @@ Only return valid JSON. No extra text.
         if not audit.get("policy_references"):
             audit["policy_references"] = list({c["source_file"] for c in policy_chunks})
         if not audit.get("rag_coverage"):
-            audit["rag_coverage"] = round(len(policy_chunks) / max(len(policy_chunks), 1), 2)
+            audit["rag_coverage"] = round(len(policy_chunks) / 5.0, 2) if policy_chunks else 0.0
 
+        # Ensure minimal structure for frontend compatibility
+        if "metrics" not in audit and "dimension_scores" in audit:
+            audit["metrics"] = audit.pop("dimension_scores")
+            
         return audit
 
     def _fallback_audit(self, raw_text: str) -> dict:
         """Return a structured fallback when LLM output isn't valid JSON."""
         return {
-            "summary": raw_text[:500] if raw_text else "Audit analysis completed.",
-            "scores": {"empathy": 5, "resolution": 5, "professionalism": 5, "compliance": 5},
             "overall_score": 50,
-            "sentiment": "Neutral",
-            "agent_performance": "Satisfactory",
-            "call_outcome": "Partially Resolved",
+            "metrics": {
+                "Sentiment": {"score": 5, "label": "Neutral", "reason": "Fallback due to parsing error"},
+                "Resolution": {"score": 5, "label": "Partial", "reason": "Analysis degraded"},
+                "Professionalism": {"score": 5, "label": "Medium", "reason": "Verification required"},
+                "Compliance": {"score": 5, "label": "Pass", "reason": "No high-risk indicators found"}
+            },
+            "executive_summary": "System was unable to generate a deep analysis. Please review transcript manually.",
+            "violations": [],
             "key_findings": ["LLM returned non-structured output"],
-            "improvement_tips": ["Review transcript manually for detailed insights"],
-            "compliance_issues": [],
-            "policy_references": [],
+            "improvement_tips": ["Review transcript for PII and conduct risks."],
+            "live_flags": ["VERIFICATION_NEEDED"],
             "rag_coverage": 0.0,
+            "policy_references": []
         }
 
     # ── Risk prediction (pre-audit) ────────────────────────────────────

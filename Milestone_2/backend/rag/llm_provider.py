@@ -8,6 +8,9 @@ import json
 import time
 import requests
 from typing import Iterator, Optional
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 
 PROVIDERS = {
     "openrouter": {
@@ -43,9 +46,16 @@ class LLMProvider:
     def __init__(self, provider: Optional[str] = None):
         self.provider = provider or ACTIVE_PROVIDER
 
+    def _is_placeholder(self, key: str) -> bool:
+        if not key or len(key) < 10: return True
+        placeholders = ["...", "sk-...", "gsk_...", "your-", "placeholder"]
+        return any(p in key.lower() for p in placeholders)
+
     def _get_credentials(self, provider: str):
         cfg = PROVIDERS.get(provider, PROVIDERS["openrouter"])
         api_key = os.getenv(cfg["key_env"], "")
+        if self._is_placeholder(api_key):
+            return cfg["base_url"] + "/chat/completions", None, cfg["default_model"]
         return cfg["base_url"] + "/chat/completions", api_key, cfg["default_model"]
 
     def _build_headers(self, api_key: str, provider: str) -> dict:
@@ -61,11 +71,12 @@ class LLMProvider:
     def complete(self, messages: list, temperature: float = 0.3) -> str:
         """Non-streaming completion with fallback chain."""
         chain = [self.provider] + [p for p in FALLBACK_CHAIN if p != self.provider]
-        last_error = None
+        errors = []
         for provider in chain:
             try:
                 url, key, model = self._get_credentials(provider)
                 if not key:
+                    errors.append(f"{provider}: skipped (no valid API key found in .env)")
                     continue
                 payload = {
                     "model": model,
@@ -77,15 +88,16 @@ class LLMProvider:
                 resp = requests.post(url, headers=self._build_headers(key, provider),
                                      data=json.dumps(payload), timeout=60)
                 if resp.status_code in (429, 500, 502, 503):
-                    last_error = f"{provider} returned {resp.status_code}"
+                    errors.append(f"{provider}: {resp.status_code} server error")
                     time.sleep(0.5)
                     continue
                 resp.raise_for_status()
                 return resp.json()["choices"][0]["message"]["content"]
             except Exception as e:
-                last_error = str(e)
+                masked_key = (key[:12] + "...") if key else "None"
+                errors.append(f"{provider} (key: {masked_key}): {str(e)}")
                 continue
-        raise RuntimeError(f"All LLM providers failed. Last error: {last_error}")
+        raise RuntimeError(f"All LLM providers failed:\n- " + "\n- ".join(errors))
 
     def stream(self, messages: list, temperature: float = 0.3) -> Iterator[str]:
         """Streaming completion — yields text chunks. Falls back to non-stream on failure."""

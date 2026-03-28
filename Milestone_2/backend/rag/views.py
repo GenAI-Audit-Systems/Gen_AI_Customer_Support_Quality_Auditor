@@ -183,8 +183,13 @@ class AnalyticsView(APIView):
                 r["created_at"] = r["created_at"].strftime("%Y-%m-%d %H:%M")
                 a = r.pop("audit_json") or {}
                 r["agent_performance"] = a.get("agent_performance", "N/A")
-                r["compliance_score"]  = (a.get("scores") or {}).get("compliance", 0)
-                r["empathy_score"]     = (a.get("scores") or {}).get("empathy", 0)
+                
+                # Support new dimension_scores schema
+                ds = a.get("dimension_scores") or {}
+                s  = a.get("scores") or {}
+                
+                r["compliance_score"] = ds.get("compliance", {}).get("score") if ds else s.get("compliance", 0)
+                r["empathy_score"]    = ds.get("empathy", {}).get("score") if ds else s.get("empathy", 0)
 
             return Response({
                 "total_audits":       total,
@@ -231,8 +236,16 @@ class AgentAnalyticsView(APIView):
                 ag = agents[key]
                 ag["total"]          += 1
                 ag["score_sum"]      += r.overall_score
-                ag["empathy_sum"]    += scores.get("empathy", 0)
-                ag["compliance_sum"] += scores.get("compliance", 0)
+                
+                # Support new dimension_scores schema
+                ds = a.get("dimension_scores") or {}
+                s  = a.get("scores") or {}
+                
+                emp = ds.get("empathy", {}).get("score") if ds else s.get("empathy", 0)
+                cmp = ds.get("compliance", {}).get("score") if ds else s.get("compliance", 0)
+                
+                ag["empathy_sum"]    += (emp or 0)
+                ag["compliance_sum"] += (cmp or 0)
                 s = r.sentiment or "Neutral"
                 ag["sentiment_counts"][s] = ag["sentiment_counts"].get(s, 0) + 1
                 ag["recent_score"]  = r.overall_score
