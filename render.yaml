@@ -13,18 +13,20 @@ services:
     buildCommand: "cd Milestone_2/backend && chmod +x build_files.sh && ./build_files.sh"
     startCommand: "cd Milestone_2/backend && daphne -b 0.0.0.0 -p $PORT django_backend.asgi:application"
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: .onrender.com
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
       - key: DATABASE_URL
         fromDatabase:
           name: auditor-postgres
           property: connectionString
-      - key: DJANGO_SECRET_KEY
-        generateValue: true
       - key: ACTIVE_LLM_PROVIDER
         value: openrouter
       - key: OPENROUTER_API_KEY
-        sync: false # You will enter this in the Render Dashboard after deployment
+        sync: false
       - key: GROQ_API_KEY
         sync: false
         

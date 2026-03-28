@@ -42,7 +42,8 @@ export default function LiveAuditPage() {
   // Try WebSocket connection
   const connectWs = () => {
     setConnecting(true);
-    const host = window.location.hostname === "localhost" ? "localhost:8000" : window.location.host;
+    const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const host = isLocal ? "localhost:8000" : window.location.host;
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     
     const socket = new WebSocket(`${protocol}//${host}/ws/audit/${sessionId}/?agent_id=demo_agent`);

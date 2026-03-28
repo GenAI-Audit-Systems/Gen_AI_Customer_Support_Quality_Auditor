@@ -155,7 +155,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 # ══════════════════════════════════════════════════════════════════════
 
 # Django Channels — ASGI real-time support
-ASGI_APPLICATION = 'django_backend.routing.application'
+ASGI_APPLICATION = 'django_backend.asgi.application'
 
 CHANNEL_LAYERS = {
     "default": {

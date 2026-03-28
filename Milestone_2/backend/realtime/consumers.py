@@ -49,131 +49,145 @@ class AuditStreamConsumer(AsyncJsonWebsocketConsumer):
         Each message from the client:
         { "turn_text": "...", "audit_id": 0, "tenant_id": "default" }
         """
-        turn_text = content.get("turn_text", "").strip()
-        audit_id  = content.get("audit_id",  0)
-        tenant_id = content.get("tenant_id", "default")
-
-        if not turn_text:
-            await self.send_json({"event": "error", "message": "turn_text required"})
-            return
-
-        # 1. Quick risk assessment (sync function called via thread)
-        from asgiref.sync import sync_to_async
-        from rag.rag_engine import get_engine
-
-        engine = get_engine()
-        risk = await sync_to_async(engine.predict_compliance_risk)(turn_text)
-        await self.send_json({"event": "risk_update", "data": risk})
-
-        # 2. Store turn in Milvus (async, fire-and-forget via engine)
-        await sync_to_async(engine.store_conversation_turn)(
-            audit_id, self.agent_id, turn_text, self.session_id
-        )
-
-        # 3. Stream LLM tokens back
-        from rag.llm_provider import llm_stream
-        aug_prompt, policy_chunks = await sync_to_async(
-            engine.augmented_audit_prompt
-        )(turn_text, tenant_id, k=3)
-
-        await self.send_json({"event": "policy_context", "data": policy_chunks})
-
-        # 10-point Enterprise Policy Context for real-time awareness
-        ENTERPRISE_SOP = """
-        1. Greeting: Must be polite and offer immediate assistance.
-        2. Empathy: Must acknowledge customer frustration with concern.
-        3. Verification: Must verify identity before account changes.
-        4. Returns: 7-day window for all items; exchange/credit only after.
-        5. Ethics: No bribes, no personal info requests.
-        6. De-escalation: Must offer manager callback for 3+ complaints.
-        7. Transparency: Must explain all fees and timelines clearly.
-        8. Resolution: Must take ownership of the issue until solved.
-        9. Closure: Must ask 'Is there anything else I can help with?'
-        10. Privacy/PII: Mask all PII; do not repeat passwords or card #s.
-        """
-
-        messages = [
-            {"role": "system", "content": (
-                "You are an ENTERPRISE REAL-TIME QA AUDITOR. "
-                "Analyze the current utterance against the Company SOP below.\n\n"
-                f"COMPANY SOP:\n{ENTERPRISE_SOP}\n\n"
-                "STRICT JSON OUTPUT FORMAT:\n"
-                "{\n"
-                '  "event": "UTTERANCE_SCORED",\n'
-                '  "speaker": "AGENT|CUSTOMER",\n'
-                '  "scores": { "empathy": 1-10, "professionalism": 1-10, "compliance": 1-10 },\n'
-                '  "flags": ["Specific policy name breached or NO_VIOLATIONS"],\n'
-                '  "violation_detected": true|false,\n'
-                '  "severity": "LOW|MEDIUM|HIGH|CRITICAL",\n'
-                '  "justification": "Brief 1-sentence explanation of the score/flag."\n'
-                "}\n"
-            )},
-            {"role": "user", "content": f"Audit this turn (Context enabled):\n{aug_prompt}"},
-        ]
-        
-        from rag.llm_provider import llm_complete
-        import json
-        
-        result_str = await sync_to_async(llm_complete)(messages, temperature=0.2)
-        
         try:
-            result = json.loads(result_str)
-        except Exception:
-            # Fallback
-            result = {
-                "event": "UTTERANCE_SCORED",
-                "speaker": "UNKNOWN",
-                "text": turn_text[:100],
-                "scores": {"empathy": 5, "professionalism": 5, "compliance": 5},
-                "flags": [],
-                "violation_detected": False,
-                "severity": "LOW"
-            }
+            turn_text = content.get("turn_text", "").strip()
+            audit_id  = content.get("audit_id",  0)
+            tenant_id = content.get("tenant_id", "default")
+
+            if not turn_text:
+                await self.send_json({"event": "error", "message": "turn_text required"})
+                return
+
+            # 1. Quick risk assessment
+            from asgiref.sync import sync_to_async
+            from rag.rag_engine import get_engine
+
+            engine = get_engine()
+            try:
+                risk = await sync_to_async(engine.predict_compliance_risk)(turn_text)
+                await self.send_json({"event": "risk_update", "data": risk})
+            except Exception as e:
+                print(f"Risk prediction error: {e}")
+                risk = {"risk_level": "LOW", "risk_score": 0, "flags": []}
+
+            # 2. Store turn in Milvus
+            try:
+                await sync_to_async(engine.store_conversation_turn)(
+                    audit_id, self.agent_id, turn_text, self.session_id
+                )
+            except Exception as e:
+                print(f"Milvus storage error: {e}")
+
+            # 3. Stream LLM tokens back
+            from rag.llm_provider import llm_stream, llm_complete
             
-        # Send UTTERANCE_SCORED
-        await self.send_json({
-            "type": "UTTERANCE_SCORED",
-            "data": result
-        })
-        
-        # Send VIOLATION_DETECTED if applicable
-        if result.get("violation_detected"):
+            try:
+                aug_prompt, policy_chunks = await sync_to_async(
+                    engine.augmented_audit_prompt
+                )(turn_text, tenant_id, k=3)
+                await self.send_json({"event": "policy_context", "data": policy_chunks})
+            except Exception as e:
+                print(f"Augmentation error: {e}")
+                aug_prompt = turn_text
+                policy_chunks = []
+
+            # 10-point Enterprise Policy Context for real-time awareness
+            ENTERPRISE_SOP = """
+            1. Greeting: Must be polite and offer immediate assistance.
+            2. Empathy: Must acknowledge customer frustration with concern.
+            3. Verification: Must verify identity before account changes.
+            4. Returns: 7-day window for all items; exchange/credit only after.
+            5. Ethics: No bribes, no personal info requests.
+            6. De-escalation: Must offer manager callback for 3+ complaints.
+            7. Transparency: Must explain all fees and timelines clearly.
+            8. Resolution: Must take ownership of the issue until solved.
+            9. Closure: Must ask 'Is there anything else I can help with?'
+            10. Privacy/PII: Mask all PII; do not repeat passwords or card #s.
+            """
+
+            messages = [
+                {"role": "system", "content": (
+                    "You are an ENTERPRISE REAL-TIME QA AUDITOR. "
+                    "Analyze the current utterance against the Company SOP below.\n\n"
+                    f"COMPANY SOP:\n{ENTERPRISE_SOP}\n\n"
+                    "STRICT JSON OUTPUT FORMAT:\n"
+                    "{\n"
+                    '  "event": "UTTERANCE_SCORED",\n'
+                    '  "speaker": "AGENT|CUSTOMER",\n'
+                    '  "scores": { "empathy": 1-10, "professionalism": 1-10, "compliance": 1-10 },\n'
+                    '  "flags": ["Specific policy name breached or NO_VIOLATIONS"],\n'
+                    '  "violation_detected": true|false,\n'
+                    '  "severity": "LOW|MEDIUM|HIGH|CRITICAL",\n'
+                    '  "justification": "Brief 1-sentence explanation of the score/flag."\n'
+                    "}\n"
+                )},
+                {"role": "user", "content": f"Audit this turn (Context enabled):\n{aug_prompt}"},
+            ]
+            
+            try:
+                result_str = await sync_to_async(llm_complete)(messages, temperature=0.2)
+                result = json.loads(result_str)
+            except Exception as e:
+                print(f"LLM/JSON Error: {e}")
+                result = {
+                    "event": "UTTERANCE_SCORED",
+                    "speaker": "UNKNOWN",
+                    "text": turn_text[:100],
+                    "scores": {"empathy": 5, "professionalism": 5, "compliance": 5},
+                    "flags": [],
+                    "violation_detected": False,
+                    "severity": "LOW",
+                    "justification": "Fallback analysis due to technical error."
+                }
+                
+            # Send UTTERANCE_SCORED
             await self.send_json({
-                "type": "VIOLATION_DETECTED",
+                "type": "UTTERANCE_SCORED",
                 "data": result
             })
             
-        buffer = json.dumps(result)
+            # Send VIOLATION_DETECTED if applicable
+            if result.get("violation_detected"):
+                await self.send_json({
+                    "type": "VIOLATION_DETECTED",
+                    "data": result
+                })
+                
+            buffer = json.dumps(result)
 
-        # 4. Compliance flag
-        if risk.get("risk_level") in ("CRITICAL", "WARNING"):
-            flag = {
-                "event":      "compliance_flag",
-                "severity":   risk["risk_level"],
-                "flags":      risk.get("flags", []),
-                "session_id": self.session_id,
-                "agent_id":   self.agent_id,
-            }
-            await self.send_json(flag)
-            # Broadcast to supervisor room
+            # 4. Compliance flag
+            if risk.get("risk_level") in ("CRITICAL", "WARNING"):
+                flag = {
+                    "event":      "compliance_flag",
+                    "severity":   risk["risk_level"],
+                    "flags":      risk.get("flags", []),
+                    "session_id": self.session_id,
+                    "agent_id":   self.agent_id,
+                }
+                await self.send_json(flag)
+                # Broadcast to supervisor room
+                await self.channel_layer.group_send(
+                    self.supervisor_group,
+                    {"type": "supervisor.alert", **flag},
+                )
+
+            # 5. Broadcast score update to supervisor room
             await self.channel_layer.group_send(
                 self.supervisor_group,
-                {"type": "supervisor.alert", **flag},
+                {
+                    "type":       "supervisor.score_update",
+                    "session_id": self.session_id,
+                    "agent_id":   self.agent_id,
+                    "risk_score": risk.get("risk_score", 0),
+                    "timestamp":  int(time.time()),
+                },
             )
 
-        # 5. Broadcast score update to supervisor room
-        await self.channel_layer.group_send(
-            self.supervisor_group,
-            {
-                "type":       "supervisor.score_update",
-                "session_id": self.session_id,
-                "agent_id":   self.agent_id,
-                "risk_score": risk.get("risk_score", 0),
-                "timestamp":  int(time.time()),
-            },
-        )
+            await self.send_json({"event": "turn_complete", "buffer_length": len(buffer)})
 
-        await self.send_json({"event": "turn_complete", "buffer_length": len(buffer)})
+        except Exception as e:
+            print(f"FATAL WEBSOCKET ERROR: {e}")
+            await self.send_json({"event": "error", "message": "An internal server error occurred."})
 
     # ── Supervisor broadcast handlers ──────────────────────────────────
     async def supervisor_alert(self, event):
