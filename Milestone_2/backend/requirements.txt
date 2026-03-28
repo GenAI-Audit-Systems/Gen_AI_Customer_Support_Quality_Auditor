@@ -6,7 +6,11 @@ requests
 python-dotenv
 psycopg2-binary
 dj-database-url
-
+# ── For deployment ───────────────────────────────────
+gunicorn
+whitenoise
+dj-database-url
+psycopg2-binary
 # ── Milestone 3: RAG + Vector Store ───────────────────────────────────
 pymilvus>=2.3.0
 #milvus-lite>=2.4.0
