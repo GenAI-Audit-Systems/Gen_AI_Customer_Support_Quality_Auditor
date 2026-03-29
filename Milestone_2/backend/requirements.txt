@@ -17,6 +17,7 @@ langchain-community>=0.0.38
 # ── Milestone 3: Real-time / WebSocket ────────────────────────────────
 channels>=4.0.0
 daphne>=4.0.0
+channels-redis>=4.2.0
 
 # ── Milestone 4: Reporting ────────────────────────────────────────────
 reportlab>=4.2.0

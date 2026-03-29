@@ -17,8 +17,9 @@ import {
 } from "recharts";
 import { GlassPanel } from "../components/ui/GlassPanel";
 import { AlertTriangle, Users, Target, Thermometer, TrendingUp } from "lucide-react";
+import { getApiBase } from "../lib/api";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/";
+const API_BASE = getApiBase();
 const getCurrentUserEmail = () => JSON.parse(window.localStorage.getItem("ai_auditor_auth") || "{}").email || "";
 
 export default function SupervisorDashboard() {

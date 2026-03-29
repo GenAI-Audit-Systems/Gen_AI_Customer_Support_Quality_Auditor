@@ -13,6 +13,8 @@ services:
     buildCommand: "cd Milestone_2/backend && chmod +x build_files.sh && ./build_files.sh"
     startCommand: "cd Milestone_2/backend && daphne -b 0.0.0.0 -p $PORT django_backend.asgi:application"
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
@@ -25,9 +27,23 @@ services:
           property: connectionString
       - key: ACTIVE_LLM_PROVIDER
         value: openrouter
+      - key: DEEPGRAM_API_KEY
+        sync: false
       - key: OPENROUTER_API_KEY
         sync: false
       - key: GROQ_API_KEY
+        sync: false
+      - key: TOGETHER_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
         sync: false
         
   - type: web
@@ -45,3 +61,7 @@ services:
           type: web
           name: auditor-backend
           envVarKey: RENDER_EXTERNAL_URL
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

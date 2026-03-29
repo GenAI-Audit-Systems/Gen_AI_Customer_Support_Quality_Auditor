@@ -2,8 +2,9 @@ import React from "react";
 import { GlassPanel } from "../components/ui/GlassPanel";
 import { useCopilot } from "../context/CopilotContext";
 import { Bot, User } from "lucide-react";
+import { getApiBase } from "../lib/api";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/";
+const API_BASE = getApiBase();
 
 export default function CopilotPage() {
   const { messages, setMessages, input, setInput, loading, setLoading } = useCopilot();

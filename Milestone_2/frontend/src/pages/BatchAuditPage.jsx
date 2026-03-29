@@ -12,8 +12,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   RadialBarChart, RadialBar, PieChart, Pie, Cell
 } from 'recharts';
+import { getApiBase } from '../lib/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/';
+const API_BASE = getApiBase();
 const getCurrentUserEmail = () => JSON.parse(window.localStorage.getItem("ai_auditor_auth") || "{}").email || "";
 const getServiceStatus = (diag, label) => {
   if (!diag) return false;

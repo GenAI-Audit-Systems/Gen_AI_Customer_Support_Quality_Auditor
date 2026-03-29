@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { LockKeyhole, Mail, Shield, UserPlus } from "lucide-react";
+import { getApiBase } from "../lib/api";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/";
+const API_BASE = getApiBase();
 
 const initialLogin = { email: "", password: "" };
 const initialRegister = { email: "", password: "", role: "Supervisor", otp: "" };

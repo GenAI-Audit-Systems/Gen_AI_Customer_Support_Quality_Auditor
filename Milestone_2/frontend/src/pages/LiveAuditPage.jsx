@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Zap, AlertTriangle } from "lucide-react";
 import { GlassPanel } from "../components/ui/GlassPanel";
+import { getApiBase, getWsBase } from "../lib/api";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/";
+const API_BASE = getApiBase();
 const getCurrentUserEmail = () => JSON.parse(window.localStorage.getItem("ai_auditor_auth") || "{}").email || "";
 const getWsUrl = (sessionId, userEmail) => {
-  const apiUrl = new URL(API_BASE);
-  const protocol = apiUrl.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${apiUrl.host}/ws/audit/${sessionId}/?agent_id=${encodeURIComponent(userEmail || "demo_agent")}`;
+  return `${getWsBase()}/ws/audit/${sessionId}/?agent_id=${encodeURIComponent(userEmail || "demo_agent")}`;
 };
 
 export default function LiveAuditPage() {
