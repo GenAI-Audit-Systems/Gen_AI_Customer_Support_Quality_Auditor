@@ -3,6 +3,7 @@ from django.db import models
 class AuditResult(models.Model):
     source_type = models.CharField(max_length=10, choices=[('audio', 'Audio'), ('text', 'Text')])
     filename = models.CharField(max_length=255, blank=True, null=True)
+    owner_email = models.EmailField(blank=True, null=True, db_index=True)
     transcript_json = models.JSONField()
     audit_json = models.JSONField()
     overall_score = models.IntegerField()

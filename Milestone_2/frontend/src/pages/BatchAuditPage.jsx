@@ -14,6 +14,12 @@ import {
 } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/';
+const getCurrentUserEmail = () => JSON.parse(window.localStorage.getItem("ai_auditor_auth") || "{}").email || "";
+const getServiceStatus = (diag, label) => {
+  if (!diag) return false;
+  const value = diag[label];
+  return typeof value === 'string' && (value.includes('Operational') || value.includes('Connected') || value.includes('Ready') || value.includes('Active'));
+};
 
 /* ── helpers ─────────────────────────────────────────────────────────── */
 const scoreColor = (v) => v >= 75 ? '#34d399' : v >= 50 ? '#fbbf24' : '#f87171';
@@ -66,6 +72,7 @@ const grade = (s) => {
 
 /* ── App ─────────────────────────────────────────────────────────────── */
 export default function BatchAuditPage() {
+  const userEmail = getCurrentUserEmail();
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -82,7 +89,15 @@ export default function BatchAuditPage() {
   useEffect(() => { if (result) setActiveTab('overview'); }, [result]);
 
   const fetchHistory = async () => {
-    try { const r = await axios.get(API_BASE + 'history/'); setHistory(r.data); } catch (_) { }
+    try { const r = await axios.get(API_BASE + `history/?user_email=${encodeURIComponent(userEmail)}`); setHistory(r.data); } catch (_) { }
+  };
+
+  const clearHistory = async () => {
+    try {
+      await axios.post(API_BASE + 'history/clear/', { user_email: userEmail });
+      setHistory([]);
+      setResult(null);
+    } catch (_) { }
   };
 
   const handleFile = (e) => {
@@ -92,7 +107,7 @@ export default function BatchAuditPage() {
 
   const processFile = async (f) => {
     setLoading(true); setError(null); setResult(null);
-    const fd = new FormData(); fd.append('file', f);
+    const fd = new FormData(); fd.append('file', f); fd.append('user_email', userEmail);
     try {
       if (f.type.includes('audio')) {
         // Audio files go through Deepgram transcription pipeline
@@ -256,7 +271,23 @@ export default function BatchAuditPage() {
   const agentPerf = audit.metrics?.Professionalism?.label || audit.agent_performance || 'Satisfactory';
   const callOutcome = audit.metrics?.Resolution?.label || audit.call_outcome || 'Resolved';
   
-  const complianceIssues = audit.violations || audit.compliance_issues || [];
+  const complianceIssues = (audit.violations || audit.compliance_issues || []).map((issue) => {
+    if (typeof issue === 'object' && issue !== null) {
+      return {
+        severity: (issue.severity || 'LOW').toUpperCase(),
+        message: issue.message || issue.description || issue.msg || issue.rule || "Compliance policy breach detected.",
+        quote: issue.quote || issue.evidence || "",
+        action: issue.action || issue.remediation || "",
+      };
+    }
+
+    return {
+      severity: 'LOW',
+      message: String(issue),
+      quote: "",
+      action: "",
+    };
+  });
 
   const radarData = Object.entries(scores).map(([k, v]) => ({
     metric: k.charAt(0).toUpperCase() + k.slice(1), value: v * 10, fullMark: 100
@@ -303,13 +334,13 @@ export default function BatchAuditPage() {
         {/* DB Health */}
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(255,255,255,.02)', padding: '4px 12px', borderRadius: 20, border: '1px solid rgba(255,255,255,.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: diag?.neon?.includes('Connected') ? '#34d399' : '#f87171', boxShadow: diag?.neon?.includes('Connected') ? '0 0 8px #34d39988' : 'none' }} />
-            <span style={{ fontSize: 9, fontWeight: 900, color: '#475569', textTransform: 'uppercase' }}>Vector Engine</span>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: getServiceStatus(diag, 'Primary Database') ? '#34d399' : '#f87171', boxShadow: getServiceStatus(diag, 'Primary Database') ? '0 0 8px #34d39988' : 'none' }} />
+            <span style={{ fontSize: 9, fontWeight: 900, color: '#475569', textTransform: 'uppercase' }}>Primary Database</span>
           </div>
           <div style={{ width: 1, height: 10, background: 'rgba(255,255,255,.1)' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: diag?.milvus?.includes('Connected') ? '#34d399' : '#fbbf24', boxShadow: diag?.milvus?.includes('Connected') ? '0 0 8px #34d39988' : 'none' }} />
-            <span style={{ fontSize: 9, fontWeight: 900, color: '#475569', textTransform: 'uppercase' }}>Intelligence Layer</span>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: getServiceStatus(diag, 'Vector Engine') ? '#34d399' : '#fbbf24', boxShadow: getServiceStatus(diag, 'Vector Engine') ? '0 0 8px #34d39988' : 'none' }} />
+            <span style={{ fontSize: 9, fontWeight: 900, color: '#475569', textTransform: 'uppercase' }}>Vector Engine</span>
           </div>
         </div>
 
@@ -319,11 +350,11 @@ export default function BatchAuditPage() {
             <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
               style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(10,14,28,.95)', border: '1px solid rgba(99,102,241,.2)', borderRadius: 10, padding: '5px 12px', marginRight: 6 }}>
               <span style={{ fontSize: 9, fontWeight: 800, color: '#334155', letterSpacing: '.1em', textTransform: 'uppercase' }}>Status:</span>
-              {['deepgram', 'openrouter'].map(k => (
-                <span key={k} style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', color: diag[k]?.includes('Connected') ? '#34d399' : '#f87171' }}>
+              {[['deepgram', 'Transcription Service'], ['openrouter', 'Intelligence Layer']].map(([label, key]) => { const k = key; return (
+                <span key={label} style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', color: getServiceStatus(diag, key) ? '#34d399' : '#f87171' }}>
                   {k} {diag[k]?.includes('Connected') ? '✓' : '✗'}
                 </span>
-              ))}
+              )})}
               <button onClick={() => setDiag(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#334155' }}><X size={11} /></button>
             </motion.div>
           )}
@@ -806,41 +837,39 @@ export default function BatchAuditPage() {
                             </div>
                           ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                              {['CRITICAL', 'HIGH', 'MEDIUM'].map(sevLevel => {
-                                const levelIssues = complianceIssues.filter(iss => {
-                                  const s = typeof iss === 'object' ? (iss.severity || 'HIGH') : 'HIGH';
-                                  return s.toUpperCase() === sevLevel;
-                                });
+                              {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(sevLevel => {
+                                const levelIssues = complianceIssues.filter((iss) => iss.severity === sevLevel);
                                 if (levelIssues.length === 0) return null;
+                                const levelColor = sevLevel === 'CRITICAL'
+                                  ? '#f87171'
+                                  : sevLevel === 'HIGH'
+                                    ? '#fbbf24'
+                                    : sevLevel === 'MEDIUM'
+                                      ? '#a78bfa'
+                                      : '#34d399';
                                 return (
                                   <div key={sevLevel}>
-                                    <div style={{ fontSize: 10, fontWeight: 900, color: sevLevel === 'CRITICAL' ? '#f87171' : sevLevel === 'HIGH' ? '#fbbf24' : '#a78bfa', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 900, color: levelColor, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                                       <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} /> {sevLevel} ISSUES ({levelIssues.length})
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                      {levelIssues.map((issue, i) => {
-                                        const isObj = typeof issue === 'object' && issue !== null;
-                                        const msg = isObj ? (issue.message || issue.description || issue.msg || issue.rule || "Compliance policy breach detected.") : String(issue);
-                                        const quote = isObj ? (issue.quote || issue.evidence) : null;
-                                        
-                                        return (
-                                          <div key={i} style={{ display: 'flex', gap: 12, flexDirection: 'column', padding: '14px', background: 'rgba(255,255,255,.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,.08)' }}>
-                                            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                                              <AlertCircle size={16} color={sevLevel === 'CRITICAL' ? '#f87171' : '#fbbf24'} style={{ marginTop: 2, flexShrink: 0 }} />
-                                              <div style={{ flex: 1 }}>
-                                                <p style={{ fontSize: 13, color: '#f1f5f9', lineHeight: 1.6, fontWeight: 600, margin: 0 }}>{msg}</p>
-                                                {quote && <p style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', marginTop: 8, padding: '6px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 6, borderLeft: '2px solid rgba(255,255,255,0.1)' }}>Evidence: "{quote}"</p>}
-                                                {isObj && (issue.action || issue.remediation) && (
-                                                   <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                      <Shield size={10} color="#fca5a5" />
-                                                      <span style={{ fontSize: 11, color: '#fca5a5', fontWeight: 700 }}>Action: {issue.action || issue.remediation}</span>
-                                                   </div>
-                                                )}
-                                              </div>
+                                      {levelIssues.map((issue, i) => (
+                                        <div key={i} style={{ display: 'flex', gap: 12, flexDirection: 'column', padding: '14px', background: 'rgba(255,255,255,.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,.08)' }}>
+                                          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                                            <AlertCircle size={16} color={levelColor} style={{ marginTop: 2, flexShrink: 0 }} />
+                                            <div style={{ flex: 1 }}>
+                                              <p style={{ fontSize: 13, color: '#f1f5f9', lineHeight: 1.6, fontWeight: 600, margin: 0 }}>{issue.message}</p>
+                                              {issue.quote && <p style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', marginTop: 8, padding: '6px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 6, borderLeft: '2px solid rgba(255,255,255,0.1)' }}>Evidence: "{issue.quote}"</p>}
+                                              {issue.action && (
+                                                 <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <Shield size={10} color={levelColor} />
+                                                    <span style={{ fontSize: 11, color: levelColor, fontWeight: 700 }}>Action: {issue.action}</span>
+                                                 </div>
+                                              )}
                                             </div>
                                           </div>
-                                        );
-                                      })}
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
                                 );
@@ -997,6 +1026,12 @@ export default function BatchAuditPage() {
                 </div>
                 <button onClick={() => setShowHistory(false)} style={{ background: 'rgba(255,255,255,.05)', border: 'none', borderRadius: 8, padding: 6, cursor: 'pointer', color: '#64748b', display: 'flex' }}>
                   <X size={18} />
+                </button>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: 12 }}>
+                <p style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Only your own audit history is shown here.</p>
+                <button className="btn" onClick={clearHistory}>
+                  <X size={13} /> Clear History
                 </button>
               </div>
               <div className="scr" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>

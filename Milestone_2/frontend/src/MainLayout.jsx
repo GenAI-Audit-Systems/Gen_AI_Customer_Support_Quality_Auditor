@@ -17,6 +17,12 @@ const NAV = [
 export default function MainLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [showLicense, setShowLicense] = useState(false);
+  const authUser = JSON.parse(window.localStorage.getItem("ai_auditor_auth") || "{}");
+
+  const logout = () => {
+    window.localStorage.removeItem("ai_auditor_auth");
+    window.location.href = "/login";
+  };
 
   return (
     <div style={styles.shell}>
@@ -76,8 +82,16 @@ export default function MainLayout() {
         <div style={styles.sidebarFooter}>
            {!collapsed ? (
              <>
+               <div style={{ marginBottom: 14, padding: "10px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.05)" }}>
+                 <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>Signed in as</div>
+                 <div style={{ fontWeight: 700, color: "#e2e8f0", wordBreak: "break-word", lineHeight: 1.25 }}>{authUser.username || "Supervisor"}</div>
+                 <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: ".08em" }}>{authUser.role || "Supervisor"}</div>
+               </div>
                <button onClick={() => setShowLicense(true)} style={styles.licenseBtn}>
                  <Shield size={12} /> View License & Legal
+               </button>
+               <button onClick={logout} style={{ ...styles.licenseBtn, marginTop: 10, borderColor: "rgba(248,113,113,0.2)", color: "#fca5a5" }}>
+                 Log Out
                </button>
                <div style={{ marginTop: 12, textAlign: 'center' }}>
                  <p style={{ fontSize: 10, color: '#334155', fontWeight: 800 }}>© 2026 INTELLIGENCE PLATFORM</p>

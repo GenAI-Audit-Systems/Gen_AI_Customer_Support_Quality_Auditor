@@ -3,23 +3,11 @@ import { Zap, AlertTriangle } from "lucide-react";
 import { GlassPanel } from "../components/ui/GlassPanel";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/";
-
-const TypewriterText = ({ text }) => {
-  const [displayText, setDisplayText] = useState("");
-
-  useEffect(() => {
-    let i = 0;
-    setDisplayText("");
-    if (!text) return;
-    const interval = setInterval(() => {
-      setDisplayText(prev => prev + text.charAt(i));
-      i++;
-      if (i >= text.length) clearInterval(interval);
-    }, 15);
-    return () => clearInterval(interval);
-  }, [text]);
-
-  return <span>{displayText}</span>;
+const getCurrentUserEmail = () => JSON.parse(window.localStorage.getItem("ai_auditor_auth") || "{}").email || "";
+const getWsUrl = (sessionId, userEmail) => {
+  const apiUrl = new URL(API_BASE);
+  const protocol = apiUrl.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${apiUrl.host}/ws/audit/${sessionId}/?agent_id=${encodeURIComponent(userEmail || "demo_agent")}`;
 };
 
 export default function LiveAuditPage() {
@@ -31,6 +19,8 @@ export default function LiveAuditPage() {
   const [streamingToken, setStreamingToken] = useState("");
   const [risk, setRisk] = useState(null);
   const [mode, setMode] = useState("auto"); // "ws" | "sse" | "auto"
+  const [statusMessage, setStatusMessage] = useState("Connecting to live socket...");
+  const userEmail = getCurrentUserEmail();
   
   const ws = useRef(null);
   const messagesEndRef = useRef(null);
@@ -42,17 +32,15 @@ export default function LiveAuditPage() {
   // Try WebSocket connection
   const connectWs = () => {
     setConnecting(true);
-    const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-    const host = isLocal ? "localhost:8000" : window.location.host;
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    
-    const socket = new WebSocket(`${protocol}//${host}/ws/audit/${sessionId}/?agent_id=demo_agent`);
+    setStatusMessage("Connecting to live socket...");
+    const socket = new WebSocket(getWsUrl(sessionId, userEmail));
     
     socket.onopen = () => {
       ws.current = socket;
       setConnected(true);
       setConnecting(false);
       setMode("ws");
+      setStatusMessage("Connected through WebSocket");
     };
     
     socket.onclose = () => {
@@ -62,9 +50,9 @@ export default function LiveAuditPage() {
     
     socket.onerror = () => {
       setConnecting(false);
-      // If WebSocket fails, fall back to SSE mode
       setMode("sse");
-      setConnected(true); // SSE is always "connected" via HTTP
+      setConnected(true);
+      setStatusMessage("WebSocket unavailable, using HTTP live stream");
     };
     
     socket.onmessage = (e) => {
@@ -81,6 +69,7 @@ export default function LiveAuditPage() {
         setMode("sse");
         setConnected(true);
         setConnecting(false);
+        setStatusMessage("WebSocket timed out, using HTTP live stream");
       }
     }, 3000);
   };
@@ -146,7 +135,7 @@ export default function LiveAuditPage() {
     setMessages(prev => [...prev, { role: "agent", text: turnText }]);
 
     try {
-      const url = `${API_BASE}rag/stream-audit/?content=${encodeURIComponent(turnText)}&tenant_id=default`;
+      const url = `${API_BASE}rag/stream-audit/?content=${encodeURIComponent(turnText)}&tenant_id=default&user_email=${encodeURIComponent(userEmail)}`;
       const response = await fetch(url);
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -236,7 +225,7 @@ export default function LiveAuditPage() {
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 8, color: connected ? "#34d399" : connecting ? "#fbbf24" : "#f87171", fontSize: 14 }}>
             <span style={{ width: 10, height: 10, borderRadius: "50%", background: connected ? "#34d399" : connecting ? "#fbbf24" : "#f87171", boxShadow: connected ? "0 0 10px #34d399" : "none" }} />
-            {connected ? "Live Stream Connected" : connecting ? "Connecting..." : "Disconnected"}
+            {connected ? statusMessage : connecting ? "Connecting..." : "Disconnected"}
           </div>
         </div>
       </header>
@@ -248,7 +237,7 @@ export default function LiveAuditPage() {
           {messages.map((m, i) => (
             <div key={i} style={{ alignSelf: m.role === "customer" ? "flex-start" : "flex-end", maxWidth: "80%" }}>
               <div style={{ background: m.role === "customer" ? "rgba(255,255,255,0.05)" : "linear-gradient(135deg, #6366f1, #8b5cf6)", padding: "12px 16px", borderRadius: 16, color: "#fff", borderBottomRightRadius: m.role === "agent" ? 0 : 16, borderBottomLeftRadius: m.role === "customer" ? 0 : 16 }}>
-                <TypewriterText text={m.text} />
+                <span>{m.text}</span>
               </div>
               
               {/* Turn level AI analysis */}

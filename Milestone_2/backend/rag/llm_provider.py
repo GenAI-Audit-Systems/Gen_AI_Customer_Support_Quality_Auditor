@@ -26,7 +26,7 @@ PROVIDERS = {
     "groq": {
         "base_url": "https://api.groq.com/openai/v1",
         "key_env":  "GROQ_API_KEY",
-        "default_model": "mixtral-8x7b-32768",
+        "default_model": "llama-3.1-8b-instant",
     },
     "together": {
         "base_url": "https://api.together.xyz/v1",
@@ -43,12 +43,17 @@ MAX_TOKENS      = int(os.getenv("MAX_TOKENS_PER_AUDIT", "1500"))
 class LLMProvider:
     """Provider-agnostic wrapper for OpenAI-compatible chat APIs."""
 
+    KNOWN_PLACEHOLDER_KEYS = {"gsk_...", "sk-...", "..."}
+
     def __init__(self, provider: Optional[str] = None):
         self.provider = provider or ACTIVE_PROVIDER
 
     def _is_placeholder(self, key: str) -> bool:
-        if not key or len(key) < 10: return True
-        placeholders = ["...", "sk-...", "gsk_...", "your-", "placeholder"]
+        if not key or len(key) < 10:
+            return True
+        if key.strip() in self.KNOWN_PLACEHOLDER_KEYS:
+            return True
+        placeholders = ["...", "sk-...", "gsk_...", "your-", "placeholder", "example", "demo"]
         return any(p in key.lower() for p in placeholders)
 
     def _get_credentials(self, provider: str):
@@ -87,6 +92,11 @@ class LLMProvider:
                 }
                 resp = requests.post(url, headers=self._build_headers(key, provider),
                                      data=json.dumps(payload), timeout=60)
+                if resp.status_code in (401, 403):
+                    errors.append(
+                        f"{provider}: unauthorized. Set a valid {PROVIDERS[provider]['key_env']} in backend/.env"
+                    )
+                    continue
                 if resp.status_code in (429, 500, 502, 503):
                     errors.append(f"{provider}: {resp.status_code} server error")
                     time.sleep(0.5)

@@ -1,73 +1,191 @@
-# 🚀 GenAI-Powered Customer Support Quality Auditor
+# GenAI Customer Support Quality Auditor
 
-Welcome to the **GenAI-Powered Customer Support Quality Auditor**, a comprehensive, full-stack intelligence platform for customer support teams. This project leverages state-of-the-art Generative AI to provide real-time transcription, deep contextual scoring, and automated compliance auditing.
+Full-stack AI quality monitoring platform for customer support teams. The app audits uploaded calls and typed conversations, scores agent performance, tracks compliance risk, streams live audit feedback, and gives supervisors a dashboard for alerts and coaching.
 
-## 🏗️ Project Architecture
+## Stack
 
-This project is built with a modern, high-performance stack:
-- **Backend**: Django REST Framework (Python)
-- **Frontend**: Vite + React (JavaScript)
-- **Transcription**: Deepgram Nova-2 (Speech-to-Text)
-- **AI Engine**: OpenRouter (GPT-4o, Claude 3.5 Sonnet)
-- **Vector Database**: Milvus (RAG over Policy Documents)
-- **Database**: PostgreSQL (Neon) with SQLite fallback
+- Backend: Django, Django REST Framework, Django Channels
+- Frontend: React, Vite, Recharts
+- Database: PostgreSQL via `DATABASE_URL` with local SQLite fallback
+- Speech-to-text: Deepgram
+- LLM providers: OpenRouter, Groq, Together
+- RAG / policy search: Milvus Lite or external Milvus
 
----
+## Main Features
 
-## 🌟 Key Features
+- Batch audit for text and audio conversations
+- Live audit stream with WebSocket or HTTP fallback
+- Compliance alerts and recent alert history
+- Supervisor dashboard with agent performance analytics
+- User-scoped data so each signed-in user sees only their own history
+- Email OTP signup flow for new users
+- Policy ingestion and semantic search for RAG-backed auditing
+- Export-ready analytics endpoints
 
-### 1. Advanced Transcription & Diarization
-- High-speed transcription via Deepgram's **Nova-2** model.
-- **Speaker Diarization**: Automatically separates Agent and Customer dialogue.
-- Multi-language support and smart formatting.
+## Project Structure
 
-### 2. Multi-Metric AI Scoring
-- **Automated Quality Assurance (AQA)**: Scores interactions on Empathy, Resolution, Professionalism, and Compliance.
-- **Metric Justification**: Detailed rationale for every score given.
-- **Executive Summary**: 2-3 sentence overview of the interaction quality.
+- `Milestone_2/backend`
+  Django backend, APIs, auth, audit engine, alerts, live streaming
+- `Milestone_2/frontend`
+  React frontend for login, dashboard, live audit, alerts, history
 
-### 3. RAG-Powered Policy Compliance (Milestone 3)
-- **Retrieval-Augmented Generation (RAG)**: Automatically cross-references transcripts with internal policy documents.
-- **Semantic Search**: Find specific clauses or guidelines within the knowledge base.
-- **Policy Ingestion**: Upload `.txt` or `.md` files to update the auditor's knowledge on-the-fly.
+## Local Development
 
-### 4. Real-time Monitoring & Alerts (Milestone 4)
-- **Live Audit Streaming**: WebSocket-based (Django Channels) turn-by-turn audit feedback.
-- **Smart Alerts**: Multi-channel notifications via Slack/Teams or Email for critical compliance breaches.
-- **Compliance Radar**: Real-time risk prediction based on early call signals.
+### 1. Backend
 
----
+From the repository root:
 
-## 📂 Modules & Component Structure
+```powershell
+cd c:\Users\kpriy\Desktop\Milestone2
+.\.venv\Scripts\Activate.ps1
+cd .\Milestone_2\backend
+python manage.py migrate
+python manage.py runserver 127.0.0.1:8001
+```
 
-- **/Milestone_2/backend**: Core Django project.
-    - `processor/`: Handles the main transcription and LLM scoring pipeline.
-    - `rag/`: Implements Vector DB (Milvus) logic and retrieval.
-    - `realtime/`: WebSocket consumers for live audit streams.
-    - `alerts/`: Notification dispatch and monitoring logic.
-- **/Milestone_2/frontend**: React + Vite application.
-    - `src/App.jsx`: Main dashboard interface.
-    - `src/styles/theme.css`: Cyberpunk/Glassmorphism design system.
+Backend URL:
 
----
+```text
+http://127.0.0.1:8001/
+```
 
-## 🛠️ Setup & Installation
+### 2. Frontend
 
-### Backend
-1. Navigate to `Milestone_2/backend`.
-2. Create and activate a virtual environment: `python -m venv .venv`.
-3. Install dependencies: `pip install -r requirements.txt`.
-4. Configure `.env` (use `.env.example` as a template).
-5. Run migrations: `python manage.py migrate`.
-6. Start server: `python manage.py runserver`.
+In a second terminal:
 
-### Frontend
-1. Navigate to `Milestone_2/frontend`.
-2. Install dependencies: `npm install`.
-3. Start development server: `npm run dev`.
+```powershell
+cd c:\Users\kpriy\Desktop\Milestone2\Milestone_2\frontend
+npm install
+npm run dev -- --host 127.0.0.1 --port 5173
+```
 
----
+Frontend URL:
 
-## 📎 License
-Copyright (c) 2026 Vidzai Digital. Licensed under the MIT License.
-Refer to `license.txt` for details.
+```text
+http://127.0.0.1:5173/login
+```
+
+## Environment Variables
+
+Backend settings live in:
+
+- `Milestone_2/backend/.env`
+- `Milestone_2/backend/.env.example`
+
+Frontend settings live in:
+
+- `Milestone_2/frontend/.env`
+
+Minimum backend values:
+
+```env
+DJANGO_SECRET_KEY=change-me
+DEBUG=True
+ALLOWED_HOSTS=127.0.0.1,localhost,.onrender.com
+DATABASE_URL=postgresql://...
+ACTIVE_LLM_PROVIDER=openrouter
+OPENROUTER_API_KEY=your-real-key
+DEEPGRAM_API_KEY=your-real-key
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+DEFAULT_FROM_EMAIL=your_email@gmail.com
+MILVUS_URI=./milvus_local.db
+REDIS_URL=redis://localhost:6379
+```
+
+Frontend API configuration:
+
+```env
+VITE_API_URL=http://127.0.0.1:8001/api/
+```
+
+## Authentication
+
+- Existing users sign in with email and password
+- New users can register with email, password, and role
+- Signup sends an OTP to the user email
+- OTP email requires valid `SMTP_USER` and `SMTP_PASSWORD` in `backend/.env`
+
+If SMTP is missing or invalid, OTP signup will fail.
+
+## Common Commands
+
+Backend checks:
+
+```powershell
+cd c:\Users\kpriy\Desktop\Milestone2\Milestone_2\backend
+python manage.py check
+python manage.py migrate
+```
+
+Frontend production build:
+
+```powershell
+cd c:\Users\kpriy\Desktop\Milestone2\Milestone_2\frontend
+npm run build
+```
+
+## Key Pages
+
+- `/login`
+  Login and OTP-based new user registration
+- `/`
+  Supervisor dashboard
+- `/batch`
+  Upload audio or text for full audit
+- `/live`
+  Live audit stream console
+- `/alerts`
+  Compliance violations and alert history
+
+## Data Storage
+
+Main application data is stored in the database configured by `DATABASE_URL`.
+
+Typical stored records:
+
+- user profiles
+- OTP verification records
+- audit results
+- alert records
+- analytics source data
+
+Milvus vectors are stored through `MILVUS_URI`.
+
+## Render Deployment Notes
+
+The project is close to Render-ready, but production deployment should confirm:
+
+- Render backend service points to `Milestone_2/backend`
+- Render build installs Python dependencies and runs migrations
+- Render start command runs Daphne or Gunicorn-compatible ASGI startup
+- `ALLOWED_HOSTS` includes the Render domain
+- frontend `VITE_API_URL` points to the deployed backend API
+- production SMTP credentials are configured
+- production Postgres is configured in `DATABASE_URL`
+- if using Channels in production, use Redis instead of in-memory layers
+
+Recommended backend start command for ASGI deployment:
+
+```powershell
+daphne -b 0.0.0.0 -p 10000 django_backend.asgi:application
+```
+
+## Troubleshooting
+
+- `Only one usage of each socket address`
+  Port is already in use. Run the backend on a different port or stop the old process.
+- `SMTP is not configured`
+  Add real `SMTP_USER` and `SMTP_PASSWORD` to `backend/.env`.
+- `All LLM providers failed`
+  Add at least one real provider key in `backend/.env`.
+- Dashboard shows no user data
+  Make sure you are signed in and the frontend is calling the correct backend API.
+- Live audit socket not connected
+  Confirm backend is running and frontend `VITE_API_URL` points to the right host and port.
+
+## License
+
+MIT License. See `license.txt`.

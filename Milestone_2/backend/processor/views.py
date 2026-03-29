@@ -26,6 +26,10 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL_NAME = "openai/gpt-3.5-turbo"
 
+
+def _requested_user_email(request):
+    return (request.data.get("user_email") or request.GET.get("user_email") or "").strip().lower()
+
 # ==============================
 # TRANSCRIBE USING DEEPGRAM (With Diarization)
 # ==============================
@@ -145,6 +149,7 @@ class AudioProcessView(APIView):
 
     def post(self, request, *args, **kwargs):
         file_obj = request.FILES.get('file')
+        user_email = _requested_user_email(request)
         if not file_obj:
             return Response({"error": "No file uploaded"}, status=400)
         
@@ -161,6 +166,7 @@ class AudioProcessView(APIView):
             audit_record = AuditResult.objects.create(
                 source_type='audio',
                 filename=file_obj.name,
+                owner_email=user_email or None,
                 transcript_json=transcription_data,
                 audit_json=audit_results,
                 overall_score=audit_results.get("overall_score", 0),
@@ -191,6 +197,7 @@ class TextProcessView(APIView):
     def post(self, request, *args, **kwargs):
         content = request.data.get('content')
         file_obj = request.FILES.get('file')
+        user_email = _requested_user_email(request)
 
         if file_obj:
             try:
@@ -212,6 +219,7 @@ class TextProcessView(APIView):
             audit_record = AuditResult.objects.create(
                 source_type='text',
                 filename=file_obj.name if file_obj else "Direct Input",
+                owner_email=user_email or None,
                 transcript_json=transcript_data,
                 audit_json=audit_results,
                 overall_score=audit_results.get("overall_score", 0),
@@ -236,7 +244,11 @@ class TextProcessView(APIView):
 
 class HistoryListView(APIView):
     def get(self, request):
-        history = AuditResult.objects.all().order_by('-created_at')[:10]
+        user_email = _requested_user_email(request)
+        history = AuditResult.objects.all()
+        if user_email:
+            history = history.filter(owner_email=user_email)
+        history = history.order_by('-created_at')[:10]
         data = [{
             "id": h.id,
             "source": h.source_type,
@@ -248,6 +260,16 @@ class HistoryListView(APIView):
             "transcript": h.transcript_json
         } for h in history]
         return Response(data)
+
+
+class ClearHistoryView(APIView):
+    def post(self, request):
+        user_email = _requested_user_email(request)
+        if not user_email:
+            return Response({"error": "user_email is required."}, status=400)
+
+        deleted_count, _ = AuditResult.objects.filter(owner_email=user_email).delete()
+        return Response({"deleted": deleted_count, "user_email": user_email})
 
 class DiagnosticView(APIView):
     def get(self, request):

@@ -18,6 +18,10 @@ from .report_generator import generate_pdf_report
 from .excel_generator import generate_excel_report
 
 
+def _requested_user_email(request):
+    return (request.data.get("user_email") or request.GET.get("user_email") or "").strip().lower()
+
+
 # ── 1. Evaluate an audit for compliance alerts ─────────────────────────
 class AlertCheckView(APIView):
     """POST /api/alerts/check/"""
@@ -52,6 +56,11 @@ class AlertHistoryView(APIView):
         severity = request.GET.get("severity", "")
         limit    = int(request.GET.get("limit", 50))
         qs = AlertRecord.objects.all()
+        user_email = _requested_user_email(request)
+        if user_email:
+            from processor.models import AuditResult
+            owned_audit_ids = AuditResult.objects.filter(owner_email=user_email).values_list("id", flat=True)
+            qs = qs.filter(audit_id__in=owned_audit_ids)
         if severity:
             qs = qs.filter(severity=severity)
         qs = qs[:limit]

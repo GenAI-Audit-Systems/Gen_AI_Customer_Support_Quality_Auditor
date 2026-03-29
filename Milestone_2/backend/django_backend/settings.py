@@ -42,6 +42,7 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'corsheaders',
+    'auth_api',
 
     'processor',
 
@@ -150,6 +151,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
 
+# Email / OTP delivery
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("SMTP_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("SMTP_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("SMTP_USE_TLS", "True").lower() in ("true", "1", "yes")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@ai-auditor.local")
+
 # ══════════════════════════════════════════════════════════════════════
 # ── RAG & Alerts Configuration ──
 # ══════════════════════════════════════════════════════════════════════
@@ -189,4 +199,4 @@ ALERT_WEBHOOK_URL = os.environ.get("ALERT_WEBHOOK_URL", "")
 
 # LLM Provider (openrouter | openai | groq | together)
 ACTIVE_LLM_PROVIDER  = os.environ.get("ACTIVE_LLM_PROVIDER", "openrouter")
-MAX_TOKENS_PER_AUDIT = os.environ.get("MAX_TOKENS_PER_AUDIT", "1500")
+MAX_TOKENS_PER_AUDIT = os.environ.get("MAX_TOKENS_PER_AUDIT", "1500")

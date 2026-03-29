@@ -13,6 +13,34 @@ from .rag_engine import get_engine
 from .policy_store import ingest_uploaded_document
 
 
+def _requested_user_email(request):
+    return (request.data.get("user_email") or request.GET.get("user_email") or "").strip().lower()
+
+
+def _extract_dimension_score(audit_json, dimension_name):
+    """Read scores from either legacy or enterprise audit payloads."""
+    audit_json = audit_json or {}
+    key = (dimension_name or "").strip()
+    if not key:
+        return 0
+
+    lower_key = key.lower()
+    title_key = key.title()
+
+    dimension_scores = audit_json.get("dimension_scores") or {}
+    if lower_key in dimension_scores:
+        value = dimension_scores.get(lower_key) or {}
+        return value.get("score", 0) or 0
+
+    metrics = audit_json.get("metrics") or {}
+    if title_key in metrics:
+        value = metrics.get(title_key) or {}
+        return value.get("score", 0) or 0
+
+    scores = audit_json.get("scores") or {}
+    return scores.get(lower_key, 0) or 0
+
+
 # ── Helper ─────────────────────────────────────────────────────────────
 def _get_history_context() -> str:
     """Pull recent audit history from Neon for copilot context."""
@@ -79,6 +107,7 @@ class RAGAuditView(APIView):
     def post(self, request):
         content  = request.data.get("content", "")
         tenant   = request.data.get("tenant_id", "default")
+        user_email = _requested_user_email(request)
         file_obj = request.FILES.get("file")
         filename = "direct_input"
 
@@ -105,6 +134,7 @@ class RAGAuditView(APIView):
             record = AuditResult.objects.create(
                 source_type="text",
                 filename=filename,
+                owner_email=user_email or None,
                 transcript_json=transcript_data,
                 audit_json=audit,
                 overall_score=audit.get("overall_score", 0),
@@ -160,7 +190,10 @@ class AnalyticsView(APIView):
         try:
             from processor.models import AuditResult
             from django.db.models import Avg, Count
+            user_email = _requested_user_email(request)
             qs = AuditResult.objects.all()
+            if user_email:
+                qs = qs.filter(owner_email=user_email)
             total = qs.count()
             if total == 0:
                 return Response({"total_audits": 0, "message": "No audit data yet."})
@@ -183,13 +216,9 @@ class AnalyticsView(APIView):
                 r["created_at"] = r["created_at"].strftime("%Y-%m-%d %H:%M")
                 a = r.pop("audit_json") or {}
                 r["agent_performance"] = a.get("agent_performance", "N/A")
-                
-                # Support new dimension_scores schema
-                ds = a.get("dimension_scores") or {}
-                s  = a.get("scores") or {}
-                
-                r["compliance_score"] = ds.get("compliance", {}).get("score") if ds else s.get("compliance", 0)
-                r["empathy_score"]    = ds.get("empathy", {}).get("score") if ds else s.get("empathy", 0)
+
+                r["compliance_score"] = _extract_dimension_score(a, "compliance")
+                r["empathy_score"] = _extract_dimension_score(a, "empathy")
 
             return Response({
                 "total_audits":       total,
@@ -215,13 +244,16 @@ class AgentAnalyticsView(APIView):
     def get(self, request):
         try:
             from processor.models import AuditResult
-            records = AuditResult.objects.all().order_by("-created_at")[:100]
+            user_email = _requested_user_email(request)
+            records = AuditResult.objects.all()
+            if user_email:
+                records = records.filter(owner_email=user_email)
+            records = records.order_by("-created_at")[:100]
             agents  = {}
             for r in records:
                 name = r.filename or f"agent_{r.id}"
                 key  = name[:40]
                 a    = r.audit_json or {}
-                scores = a.get("scores", {})
                 if key not in agents:
                     agents[key] = {
                         "agent_id":    key,
@@ -236,14 +268,10 @@ class AgentAnalyticsView(APIView):
                 ag = agents[key]
                 ag["total"]          += 1
                 ag["score_sum"]      += r.overall_score
-                
-                # Support new dimension_scores schema
-                ds = a.get("dimension_scores") or {}
-                s  = a.get("scores") or {}
-                
-                emp = ds.get("empathy", {}).get("score") if ds else s.get("empathy", 0)
-                cmp = ds.get("compliance", {}).get("score") if ds else s.get("compliance", 0)
-                
+
+                emp = _extract_dimension_score(a, "empathy")
+                cmp = _extract_dimension_score(a, "compliance")
+
                 ag["empathy_sum"]    += (emp or 0)
                 ag["compliance_sum"] += (cmp or 0)
                 s = r.sentiment or "Neutral"
@@ -285,6 +313,9 @@ class SentimentHeatmapView(APIView):
             now   = timezone.now()
             start = now - datetime.timedelta(days=7)
             qs    = AuditResult.objects.filter(created_at__gte=start)
+            user_email = _requested_user_email(request)
+            if user_email:
+                qs = qs.filter(owner_email=user_email)
             grid  = {}
             for r in qs:
                 day  = r.created_at.strftime("%a")

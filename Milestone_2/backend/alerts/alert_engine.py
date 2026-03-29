@@ -23,12 +23,12 @@ DEFAULT_RULES = [
     {
         "name":        "low_overall_score",
         "severity":    "WARNING",
-        "description": "Overall quality score below 50.",
-        "check":       lambda a: a.get("overall_score", 100) < 50,
+        "description": "Overall quality score below 60.",
+        "check":       lambda a: a.get("overall_score", 100) < 60,
     },
     {
         "name":        "compliance_issues_detected",
-        "severity":    "INFO",
+        "severity":    "WARNING",
         "description": "Compliance issues flagged by the AI Auditor.",
         "check":       lambda a: len(a.get("violations") or a.get("compliance_issues") or []) > 0,
     },
@@ -149,7 +149,20 @@ def evaluate_audit(audit_id: int, audit_json: dict, agent_id: str = "unknown") -
         violations = audit_json.get("violations") or audit_json.get("compliance_issues") or []
         violation_summary = ""
         if violations:
-            violation_summary = " | Issues: " + "; ".join([v.get("message") if isinstance(v, dict) else v for v in violations[:3]])
+            issue_text = []
+            for violation in violations[:3]:
+                if isinstance(violation, dict):
+                    text = (
+                        violation.get("message")
+                        or violation.get("description")
+                        or violation.get("category")
+                        or violation.get("severity")
+                        or "Compliance issue detected"
+                    )
+                else:
+                    text = str(violation)
+                issue_text.append(text)
+            violation_summary = " | Issues: " + "; ".join(issue_text)
         
         display_description = rule["description"] + violation_summary
 

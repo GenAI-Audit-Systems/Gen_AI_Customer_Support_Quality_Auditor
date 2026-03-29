@@ -3,14 +3,20 @@ import { GlassPanel } from "../components/ui/GlassPanel";
 import { BarChart3, AlertTriangle, FileText } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/";
+const getCurrentUserEmail = () => JSON.parse(window.localStorage.getItem("ai_auditor_auth") || "{}").email || "";
 
 export default function AlertsPage() {
+  const userEmail = getCurrentUserEmail();
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const alertCounts = alerts.reduce((acc, alert) => {
+    acc[alert.severity] = (acc[alert.severity] || 0) + 1;
+    return acc;
+  }, {});
 
   const fetchAlerts = async () => {
     try {
-      const res = await fetch(`${API_BASE}alerts/history/?limit=100`);
+      const res = await fetch(`${API_BASE}alerts/history/?limit=100&user_email=${encodeURIComponent(userEmail)}`);
       const data = await res.json();
       if (data.alerts) setAlerts(data.alerts);
     } catch (e) {
@@ -22,6 +28,8 @@ export default function AlertsPage() {
 
   useEffect(() => {
     fetchAlerts();
+    const interval = setInterval(fetchAlerts, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleReview = async (id) => {
@@ -60,11 +68,29 @@ export default function AlertsPage() {
         </button>
       </header>
 
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 24 }}>
+        {[
+          { label: "Critical", key: "CRITICAL", color: "#f87171" },
+          { label: "Warning", key: "WARNING", color: "#fbbf24" },
+          { label: "Info", key: "INFO", color: "#34d399" },
+        ].map((item) => (
+          <GlassPanel key={item.key} style={{ padding: 18 }}>
+            <div style={{ fontSize: 12, color: "#94a3b8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>{item.label} Alerts</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: item.color }}>{alertCounts[item.key] || 0}</div>
+          </GlassPanel>
+        ))}
+      </div>
+
       <GlassPanel title={<><AlertTriangle size={16} style={{marginRight:8, verticalAlign:"middle"}} /> Compliance Violations Log</>}>
         {loading ? (
           <div style={{ color: "#94a3b8", padding: 20 }}>Loading alerts...</div>
         ) : alerts.length === 0 ? (
-          <div style={{ color: "#94a3b8", padding: 20 }}>No compliance alerts triggered.</div>
+          <div style={{ color: "#94a3b8", padding: 20 }}>
+            No compliance alerts triggered yet for this user.
+            <div style={{ marginTop: 10, fontSize: 12, color: "#64748b" }}>
+              Submit a risky text or audio audit and this page will refresh automatically.
+            </div>
+          </div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
@@ -82,7 +108,7 @@ export default function AlertsPage() {
                 <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", opacity: a.reviewed ? 0.6 : 1 }}>
                   <td style={{ padding: "12px 0", color: "#cbd5e1" }}>{a.created_at}</td>
                   <td>
-                    <span className={`badge ${a.severity === 'CRITICAL' ? 'b-red alert-critical' : a.severity === 'HIGH' ? 'b-amber' : a.severity === 'MEDIUM' ? 'b-violet' : 'b-green'}`}>
+                    <span className={`badge ${a.severity === 'CRITICAL' ? 'b-red alert-critical' : a.severity === 'WARNING' ? 'b-amber' : 'b-green'}`}>
                       {a.severity}
                     </span>
                   </td>
