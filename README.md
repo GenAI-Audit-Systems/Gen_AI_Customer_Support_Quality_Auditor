@@ -22,6 +22,9 @@ Full-stack AI quality monitoring platform for customer support teams. The app au
 - Policy ingestion and semantic search for RAG-backed auditing
 - Export-ready analytics endpoints
 
+## Demo Video
+https://github.com/user-attachments/assets/cec23a93-c9b0-4224-859a-825f680a2b82
+
 ## Project Structure
 
 - `Milestone_2/backend`
