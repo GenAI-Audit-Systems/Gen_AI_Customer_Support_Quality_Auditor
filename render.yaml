@@ -7,7 +7,7 @@ databases:
 services:
   - type: web
     name: auditor-backend
-    env: python
+    runtime: python
     region: ohio
     plan: free
     buildCommand: "cd Milestone_2/backend && chmod +x build_files.sh && ./build_files.sh"
@@ -48,9 +48,7 @@ services:
         
   - type: web
     name: auditor-frontend
-    env: static
-    region: ohio
-    plan: free
+    runtime: static
     buildCommand: "cd Milestone_2/frontend && npm install && npm run build"
     staticPublishPath: "./Milestone_2/frontend/dist"
     envVars:
