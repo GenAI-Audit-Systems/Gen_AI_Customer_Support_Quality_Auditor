@@ -7,10 +7,13 @@ import os
 import hashlib
 import threading
 
-from .rag_engine import get_engine
-
 _ingested_hashes: set = set()
 _lock = threading.Lock()
+
+
+def _get_engine():
+    from .rag_engine import get_engine
+    return get_engine()
 
 
 def _file_hash(path: str) -> str:
@@ -26,7 +29,7 @@ def _ingest_file(path: str, doc_type: str, tenant_id: str = "default"):
         _ingested_hashes.add(h)
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
-    engine = get_engine()
+    engine = _get_engine()
     count = engine.ingest_document(
         text=text,
         doc_type=doc_type,
@@ -82,4 +85,4 @@ def ingest_uploaded_document(text: str, filename: str,
         if h in _ingested_hashes:
             return 0
         _ingested_hashes.add(h)
-    return get_engine().ingest_document(text, doc_type, tenant_id, filename)
+    return _get_engine().ingest_document(text, doc_type, tenant_id, filename)

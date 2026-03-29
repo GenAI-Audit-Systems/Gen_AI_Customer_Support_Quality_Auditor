@@ -9,12 +9,14 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
-from .rag_engine import get_engine
-from .policy_store import ingest_uploaded_document
-
 
 def _requested_user_email(request):
     return (request.data.get("user_email") or request.GET.get("user_email") or "").strip().lower()
+
+
+def _get_engine():
+    from .rag_engine import get_engine
+    return get_engine()
 
 
 def _extract_dimension_score(audit_json, dimension_name):
@@ -85,6 +87,7 @@ class PolicyIngestView(APIView):
             return Response({"error": "No text content provided."}, status=400)
 
         try:
+            from .policy_store import ingest_uploaded_document
             count = ingest_uploaded_document(text, filename, doc_type, tenant)
             return Response({
                 "status": "ingested",
@@ -126,7 +129,7 @@ class RAGAuditView(APIView):
             from processor.utils import split_transcript_by_speaker
             transcript_data = split_transcript_by_speaker(content)
 
-            engine = get_engine()
+            engine = _get_engine()
             audit  = engine.perform_rag_audit(content, tenant)
 
             # Persist to DB (same model as existing pipeline)
@@ -174,7 +177,7 @@ class PolicySearchView(APIView):
         if not query:
             return Response({"error": "Query parameter 'q' is required."}, status=400)
         try:
-            results = get_engine().query_policy(query, tenant, k)
+            results = _get_engine().query_policy(query, tenant, k)
             return Response({"query": query, "results": results, "count": len(results)})
         except Exception as e:
             return Response({"error": str(e)}, status=500)
@@ -343,7 +346,7 @@ class RiskPredictionView(APIView):
         if not content.strip():
             return Response({"error": "content is required."}, status=400)
         try:
-            result = get_engine().predict_compliance_risk(content)
+            result = _get_engine().predict_compliance_risk(content)
             return Response(result)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
@@ -368,7 +371,7 @@ class CoachingReportView(APIView):
                 content    = content or (record.transcript_json or {}).get("full_text", "")
             if not content:
                 return Response({"error": "audit_id or content required."}, status=400)
-            coaching = get_engine().generate_coaching_report(content, audit_data)
+            coaching = _get_engine().generate_coaching_report(content, audit_data)
             return Response(coaching)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
@@ -387,7 +390,7 @@ class CopilotView(APIView):
             return Response({"error": "question is required."}, status=400)
         try:
             history_ctx = _get_history_context()
-            result      = get_engine().copilot_answer(question, history_ctx)
+            result      = _get_engine().copilot_answer(question, history_ctx)
             return Response(result)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
@@ -408,7 +411,7 @@ class StreamAuditView(APIView):
             return Response({"error": "content query parameter required."}, status=400)
 
         def _event_stream():
-            engine = get_engine()
+            engine = _get_engine()
             aug_prompt, policy_chunks = engine.augmented_audit_prompt(content, tenant)
             # Emit policy context first
             policy_json = json.dumps({"event": "policy_context", "data": policy_chunks})
